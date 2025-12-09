@@ -1737,7 +1737,8 @@
             });
 
             // Build final arrow data with calculated positions
-            const spacingFactor = 0.008; // Controls how spread out arrows are along arc
+            // Use a larger spacing factor to spread arrows across more of the arc
+            const spacingFactor = 0.018; // Controls how spread out arrows are along arc
 
             const arrowData = allArrows.map(arrow => {
                 const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
@@ -1798,7 +1799,8 @@
             // Determine line style based on impact
             function getStrokeDasharray(impact) {
                 if (impact === '(+)') return '12,4'; // Dashed for positive
-                if (impact === '(-/+)' || impact === '?') return '3,3'; // Dotted for mixed/unknown
+                if (impact === '(-/+)') return '8,3,2,3'; // Dash-dot for mixed
+                if (impact === '?') return '2,4'; // Small dots for unknown
                 return 'none'; // Solid for negative
             }
 
@@ -1871,34 +1873,34 @@
                 <div class="legend-section">
                     <h3>Line Style (Impact Direction)</h3>
                     <div class="legend-item interactive" data-type="impact" data-value="(-)" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#e74c3c" stroke-width="3"/></svg>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="3"/></svg>
                         <span>Negative (-) - Solid</span>
                     </div>
                     <div class="legend-item interactive" data-type="impact" data-value="(+)" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#2ecc71" stroke-width="3" stroke-dasharray="12,4"/></svg>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="3" stroke-dasharray="12,4"/></svg>
                         <span>Positive (+) - Dashed</span>
                     </div>
                     <div class="legend-item interactive" data-type="impact" data-value="(-/+)" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#f39c12" stroke-width="3" stroke-dasharray="3,3"/></svg>
-                        <span>Mixed (-/+) - Dotted</span>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="3" stroke-dasharray="8,3,2,3"/></svg>
+                        <span>Mixed (-/+) - Dash-dot</span>
                     </div>
                     <div class="legend-item interactive" data-type="impact" data-value="?" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#95a5a6" stroke-width="3" stroke-dasharray="3,3"/></svg>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="3" stroke-dasharray="2,4"/></svg>
                         <span>Unknown (?) - Dotted</span>
                     </div>
                 </div>
                 <div class="legend-section">
                     <h3>Arrow Width (Relevance)</h3>
                     <div class="legend-item interactive" data-type="relevance" data-value="high" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#888" stroke-width="4"/></svg>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="4"/></svg>
                         <span>High</span>
                     </div>
                     <div class="legend-item interactive" data-type="relevance" data-value="medium" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#888" stroke-width="2"/></svg>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="2"/></svg>
                         <span>Medium</span>
                     </div>
                     <div class="legend-item interactive" data-type="relevance" data-value="low" data-viz="phc">
-                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#888" stroke-width="1"/></svg>
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="currentColor" stroke-width="1"/></svg>
                         <span>Low</span>
                     </div>
                 </div>
