@@ -930,7 +930,8 @@
         // ============================================
         function createChordDiagram() {
             const width = 700, height = 700;
-            const outerRadius = Math.min(width, height) * 0.5 - 80;
+            const iconSize = 64;
+            const outerRadius = Math.min(width, height) * 0.5 - 100;
             const innerRadius = outerRadius - 25;
 
             const svg = d3.select('#chart-chord')
@@ -982,13 +983,42 @@
                 })
                 .on('mouseout', () => svg.selectAll('.chord-path').style('opacity', 0.7));
 
-            group.append('text')
-                .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
-                .attr('dy', '0.35em')
-                .attr('class', 'node-label')
-                .attr('transform', d => `rotate(${d.angle * 180 / Math.PI - 90}) translate(${outerRadius + 12}) ${d.angle > Math.PI ? 'rotate(180)' : ''}`)
-                .attr('text-anchor', d => d.angle > Math.PI ? 'end' : null)
-                .text(d => nodes[d.index]);
+            // Add icons for each node
+            group.each(function(d) {
+                d.angle = (d.startAngle + d.endAngle) / 2;
+            });
+
+            group.append('image')
+                .attr('href', d => `symbols/${pbSymbols[nodes[d.index]]}.svg`)
+                .attr('width', iconSize)
+                .attr('height', iconSize)
+                .attr('transform', d => {
+                    const x = Math.cos(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
+                    const y = Math.sin(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
+                    return `translate(${x - iconSize/2},${y - iconSize/2})`;
+                })
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    svg.selectAll('.chord-path').style('opacity', c =>
+                        c.sourceIndex === d.index || c.targetIndex === d.index ? 0.8 : 0.1);
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize * 1.2).attr('height', iconSize * 1.2)
+                        .attr('transform', () => {
+                            const x = Math.cos(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
+                            const y = Math.sin(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
+                            return `translate(${x - iconSize*0.6},${y - iconSize*0.6})`;
+                        });
+                })
+                .on('mouseout', function(event, d) {
+                    svg.selectAll('.chord-path').style('opacity', 0.7);
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize).attr('height', iconSize)
+                        .attr('transform', () => {
+                            const x = Math.cos(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
+                            const y = Math.sin(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
+                            return `translate(${x - iconSize/2},${y - iconSize/2})`;
+                        });
+                });
 
             // Create ribbon data for each impact type separately
             const ribbonData = [];
@@ -1125,7 +1155,7 @@
         // ============================================
         function createEdgeBundling() {
             const width = 800, height = 800;
-            const radius = width / 2 - 120;
+            const radius = width / 2 - 140;
 
             const svg = d3.select('#chart-edge-bundle')
                 .append('svg')
@@ -1293,7 +1323,7 @@
 
             // Draw nodes with symbols
             const nodesGroup = svg.append('g');
-            const symbolSize = 32;
+            const symbolSize = 64;
 
             nodes.forEach(n => {
                 const pos = nodePositions[n];
@@ -1325,7 +1355,7 @@
                             .attr('x', -symbolSize / 2).attr('y', -symbolSize / 2);
                     });
 
-                const labelRadius = radius + 25;
+                const labelRadius = radius + 45;
                 const lx = Math.cos(pos.angle) * labelRadius;
                 const ly = Math.sin(pos.angle) * labelRadius;
                 const textAnchor = pos.angle > Math.PI/2 || pos.angle < -Math.PI/2 ? 'end' : 'start';
@@ -1355,7 +1385,8 @@
         // ============================================
         function createMatrix() {
             const size = 60;
-            const margin = { top: 100, right: 50, bottom: 50, left: 100 };
+            const iconSize = 64;
+            const margin = { top: 120, right: 50, bottom: 50, left: 120 };
             const width = nodes.length * size + margin.left + margin.right;
             const height = nodes.length * size + margin.top + margin.bottom;
 
@@ -1505,32 +1536,29 @@
                 .attr('pointer-events', 'none')
                 .text(d => d.count);
 
-            // Row labels (sources)
+            // Row labels (sources) - SVG icons
             g.selectAll('.row-label')
                 .data(nodes)
-                .join('text')
+                .join('image')
                 .attr('class', 'matrix-label row-label')
-                .attr('x', -10)
-                .attr('y', (d, i) => i * size + size / 2)
-                .attr('text-anchor', 'end')
-                .attr('dominant-baseline', 'middle')
-                .attr('fill', d => pbColors[d])
-                .attr('font-weight', 'bold')
-                .text(d => d);
+                .attr('href', d => `symbols/${pbSymbols[d]}.svg`)
+                .attr('width', iconSize)
+                .attr('height', iconSize)
+                .attr('x', -iconSize - 10)
+                .attr('y', (d, i) => i * size + size / 2 - iconSize / 2)
+                .style('cursor', 'pointer');
 
-            // Column labels (targets)
+            // Column labels (targets) - SVG icons
             g.selectAll('.col-label')
                 .data(nodes)
-                .join('text')
+                .join('image')
                 .attr('class', 'matrix-label col-label')
-                .attr('x', (d, i) => i * size + size / 2)
-                .attr('y', -10)
-                .attr('text-anchor', 'start')
-                .attr('dominant-baseline', 'middle')
-                .attr('fill', d => pbColors[d])
-                .attr('font-weight', 'bold')
-                .attr('transform', (d, i) => `rotate(-45, ${i * size + size / 2}, -10)`)
-                .text(d => d);
+                .attr('href', d => `symbols/${pbSymbols[d]}.svg`)
+                .attr('width', iconSize)
+                .attr('height', iconSize)
+                .attr('x', (d, i) => i * size + size / 2 - iconSize / 2)
+                .attr('y', -iconSize - 10)
+                .style('cursor', 'pointer');
 
             // Axis labels
             svg.append('text')
@@ -1587,7 +1615,8 @@
         // ============================================
         function createPHCFigure() {
             const width = 800, height = 800;
-            const outerRadius = width / 2 - 80;
+            const iconSize = 64;
+            const outerRadius = width / 2 - 100;
             const innerRadius = outerRadius - 30;
             const arrowRadius = innerRadius - 5;
 
@@ -1640,19 +1669,32 @@
                     svg.selectAll('.phc-arrow').attr('opacity', 0.8);
                 });
 
-            // PB labels
-            svg.selectAll('.phc-label')
+            // PB icons
+            svg.selectAll('.phc-icon')
                 .data(phcOrder)
-                .join('text')
-                .attr('class', 'phc-label')
-                .attr('x', (d, i) => Math.sin(angleScale(i)) * (outerRadius - 15))
-                .attr('y', (d, i) => -Math.cos(angleScale(i)) * (outerRadius - 15))
-                .attr('text-anchor', 'middle')
-                .attr('dominant-baseline', 'middle')
-                .attr('fill', '#fff')
-                .attr('font-size', '14px')
-                .attr('font-weight', 'bold')
-                .text(d => d);
+                .join('image')
+                .attr('class', 'phc-icon')
+                .attr('href', d => `symbols/${pbSymbols[d]}.svg`)
+                .attr('width', iconSize)
+                .attr('height', iconSize)
+                .attr('x', (d, i) => Math.sin(angleScale(i)) * (outerRadius + iconSize/2 + 5) - iconSize/2)
+                .attr('y', (d, i) => -Math.cos(angleScale(i)) * (outerRadius + iconSize/2 + 5) - iconSize/2)
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    svg.selectAll('.phc-arrow')
+                        .attr('opacity', arrow => arrow.source === d || arrow.target === d ? 1 : 0.1);
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize * 1.2).attr('height', iconSize * 1.2)
+                        .attr('x', (_, i) => Math.sin(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize*0.6)
+                        .attr('y', (_, i) => -Math.cos(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize*0.6);
+                })
+                .on('mouseout', function(event, d) {
+                    svg.selectAll('.phc-arrow').attr('opacity', 0.8);
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize).attr('height', iconSize)
+                        .attr('x', Math.sin(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize/2)
+                        .attr('y', -Math.cos(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize/2);
+                });
 
             // Collect all arrows with their data
             const allArrows = [];
