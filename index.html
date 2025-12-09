@@ -923,21 +923,35 @@
                 .append('g')
                 .attr('transform', `translate(${width/2},${height/2})`);
 
-            // Build matrix
-            const matrix = Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0));
+            // Build total matrix for arc sizing (sum of all impacts)
+            const totalMatrix = Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0));
             processedData.forEach(d => {
                 const si = nodeIndex[d.sourceAbbrev], ti = nodeIndex[d.targetAbbrev];
                 if (si !== undefined && ti !== undefined) {
-                    matrix[si][ti] += relevanceWidth[d.relevance] || 1;
+                    totalMatrix[si][ti] += relevanceWidth[d.relevance] || 1;
+                }
+            });
+
+            // Build separate matrices for each impact type
+            const impactMatrices = {
+                '(-)': Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0)),
+                '(+)': Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0)),
+                '(-/+)': Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0)),
+                '?': Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0))
+            };
+
+            processedData.forEach(d => {
+                const si = nodeIndex[d.sourceAbbrev], ti = nodeIndex[d.targetAbbrev];
+                if (si !== undefined && ti !== undefined && impactMatrices[d.impact]) {
+                    impactMatrices[d.impact][si][ti] += relevanceWidth[d.relevance] || 1;
                 }
             });
 
             const chord = d3.chord().padAngle(0.05).sortSubgroups(d3.descending);
-            const chords = chord(matrix);
+            const chords = chord(totalMatrix);
             const arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
-            const ribbon = d3.ribbon().radius(innerRadius - 3);
 
-            // Groups
+            // Groups (arcs)
             const group = svg.append('g').selectAll('g').data(chords.groups).join('g');
 
             group.append('path')
@@ -947,7 +961,7 @@
                 .attr('d', arc)
                 .on('mouseover', function(event, d) {
                     svg.selectAll('.chord-path').style('opacity', c =>
-                        c.source.index === d.index || c.target.index === d.index ? 0.8 : 0.1);
+                        c.sourceIndex === d.index || c.targetIndex === d.index ? 0.8 : 0.1);
                 })
                 .on('mouseout', () => svg.selectAll('.chord-path').style('opacity', 0.7));
 
@@ -959,30 +973,123 @@
                 .attr('text-anchor', d => d.angle > Math.PI ? 'end' : null)
                 .text(d => nodes[d.index]);
 
-            // Chords
+            // Create ribbon data for each impact type separately
+            const ribbonData = [];
+            const impactOrder = ['(-)', '(+)', '(-/+)', '?']; // Order for consistent stacking
+
+            // For each source-target pair, create separate ribbons per impact type
+            chords.forEach(c => {
+                const sourceIdx = c.source.index;
+                const targetIdx = c.target.index;
+                const sourceNode = nodes[sourceIdx];
+                const targetNode = nodes[targetIdx];
+                const key = `${sourceNode}-${targetNode}`;
+                const conn = connections[key] || [];
+
+                if (conn.length === 0) return;
+
+                // Group by impact
+                const impactGroups = {};
+                conn.forEach(item => {
+                    if (!impactGroups[item.impact]) impactGroups[item.impact] = [];
+                    impactGroups[item.impact].push(item);
+                });
+
+                const presentImpacts = Object.keys(impactGroups);
+                const numImpacts = presentImpacts.length;
+
+                // Calculate angle ranges for this chord, subdivided by impact type
+                const sourceAngleRange = c.source.endAngle - c.source.startAngle;
+                const targetAngleRange = c.target.endAngle - c.target.startAngle;
+
+                // Calculate total weight for proportional subdivision
+                const totalWeight = conn.reduce((sum, item) => sum + (relevanceWidth[item.relevance] || 1), 0);
+
+                let sourceAngleOffset = 0;
+                let targetAngleOffset = 0;
+
+                presentImpacts.forEach((impact, idx) => {
+                    const group = impactGroups[impact];
+                    const groupWeight = group.reduce((sum, item) => sum + (relevanceWidth[item.relevance] || 1), 0);
+                    const proportion = groupWeight / totalWeight;
+
+                    const sourceStartAngle = c.source.startAngle + sourceAngleOffset;
+                    const sourceEndAngle = sourceStartAngle + sourceAngleRange * proportion;
+                    const targetStartAngle = c.target.startAngle + targetAngleOffset;
+                    const targetEndAngle = targetStartAngle + targetAngleRange * proportion;
+
+                    sourceAngleOffset += sourceAngleRange * proportion;
+                    targetAngleOffset += targetAngleRange * proportion;
+
+                    ribbonData.push({
+                        source: {
+                            index: sourceIdx,
+                            startAngle: sourceStartAngle,
+                            endAngle: sourceEndAngle
+                        },
+                        target: {
+                            index: targetIdx,
+                            startAngle: targetStartAngle,
+                            endAngle: targetEndAngle
+                        },
+                        impact: impact,
+                        sourceNode: sourceNode,
+                        targetNode: targetNode,
+                        sourceIndex: sourceIdx,
+                        targetIndex: targetIdx,
+                        count: group.length,
+                        weight: groupWeight
+                    });
+                });
+            });
+
+            // Custom ribbon generator
+            const ribbon = d3.ribbon().radius(innerRadius - 3);
+
+            // Draw ribbons
             svg.append('g')
                 .selectAll('path')
-                .data(chords)
+                .data(ribbonData)
                 .join('path')
                 .attr('class', 'chord-path')
                 .attr('d', ribbon)
-                .attr('fill', d => {
-                    const key = `${nodes[d.source.index]}-${nodes[d.target.index]}`;
-                    const conn = connections[key];
-                    if (conn) {
-                        const neg = conn.filter(c => c.impact === '(-)').length;
-                        const pos = conn.filter(c => c.impact === '(+)').length;
-                        if (neg >= pos) return impactColors['(-)'];
-                        return impactColors['(+)'];
-                    }
-                    return '#95a5a6';
-                })
-                .attr('stroke', d => d3.color(pbColors[nodes[d.source.index]]).darker(0.5))
+                .attr('fill', d => impactColors[d.impact])
+                .attr('stroke', d => d3.color(impactColors[d.impact]).darker(0.3))
+                .attr('stroke-width', 0.5)
                 .style('opacity', 0.7)
                 .on('mouseover', function(event, d) {
                     d3.select(this).style('opacity', 1);
-                    const content = getTooltipContent(nodes[d.source.index], nodes[d.target.index]);
-                    if (content) showTooltip(event, content);
+                    // Show tooltip for this specific impact type
+                    const key = `${d.sourceNode}-${d.targetNode}`;
+                    const conn = connections[key] || [];
+                    const impactConn = conn.filter(c => c.impact === d.impact);
+
+                    let processesHtml = impactConn.slice(0, 3).map(c => `
+                        <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span class="tooltip-impact ${c.impact === '(-)' ? 'negative' : c.impact === '(+)' ? 'positive' : c.impact === '(-/+)' ? 'mixed' : 'unknown'}">${c.impact}</span>
+                                <span class="tooltip-muted" style="font-size: 0.7rem;">Relevance: ${c.relevance}</span>
+                            </div>
+                            <div class="tooltip-value" style="font-size: 0.8rem; margin-bottom: 4px;">${c.process}</div>
+                            <div class="tooltip-literature">${c.literature || 'No reference'}</div>
+                        </div>
+                    `).join('');
+
+                    if (impactConn.length > 3) {
+                        processesHtml += `<div class="tooltip-muted" style="font-size: 0.75rem;">...and ${impactConn.length - 3} more</div>`;
+                    }
+
+                    const impactLabel = d.impact === '(-)' ? 'Negative' : d.impact === '(+)' ? 'Positive' : d.impact === '(-/+)' ? 'Mixed' : 'Unknown';
+                    const content = `
+                        <div class="tooltip-header">
+                            <span style="color: ${pbColors[d.sourceNode]}; font-weight: bold;">${d.sourceNode}</span>
+                            <span class="tooltip-arrow">→</span>
+                            <span style="color: ${pbColors[d.targetNode]}; font-weight: bold;">${d.targetNode}</span>
+                            <span class="tooltip-muted" style="font-size: 0.8rem;">(${impactConn.length} ${impactLabel} interaction${impactConn.length > 1 ? 's' : ''})</span>
+                        </div>
+                        ${processesHtml}
+                    `;
+                    showTooltip(event, content);
                 })
                 .on('mousemove', event => {
                     tooltip.style.left = `${Math.min(event.clientX + 15, window.innerWidth - 450)}px`;
@@ -1068,45 +1175,56 @@
                 return `M${s.x},${s.y} C${cp1x},${cp1y} ${cp2x},${cp2y} ${t.x},${t.y}`;
             }
 
-            // Aggregate links and assign offsets to distinguish overlapping paths
+            // Create separate links for each impact type (not aggregated)
             const linkData = [];
-            const pairCounts = {}; // Track how many links between each pair of adjacent node pairs
+            const pairOffsets = {}; // Track offsets for each source-target pair
 
-            Object.keys(connections).forEach((key, idx) => {
+            Object.keys(connections).forEach((key) => {
                 const [source, target] = key.split('-');
                 const conn = connections[key];
-                const impacts = conn.map(c => c.impact);
-                const neg = impacts.filter(i => i === '(-)').length;
-                const pos = impacts.filter(i => i === '(+)').length;
-                const mix = impacts.filter(i => i === '(-/+)').length;
 
-                let impactType = 'unknown';
-                if (neg >= pos && neg >= mix) impactType = 'negative';
-                else if (pos >= neg && pos >= mix) impactType = 'positive';
-                else if (mix > 0) impactType = 'mixed';
+                // Group connections by impact type
+                const impactGroups = {};
+                conn.forEach(c => {
+                    const impact = c.impact;
+                    if (!impactGroups[impact]) {
+                        impactGroups[impact] = [];
+                    }
+                    impactGroups[impact].push(c);
+                });
 
-                const maxRelevance = conn.reduce((max, c) => {
-                    const w = relevanceWidth[c.relevance] || 1;
-                    return w > max ? w : max;
-                }, 1);
+                // Create a link for each impact type present
+                const impactTypes = Object.keys(impactGroups);
+                const numTypes = impactTypes.length;
 
-                // Calculate offset based on source-target combination to spread out overlapping lines
-                // Use a hash of source+target indices to create consistent offsets
-                const sIdx = nodePositions[source]?.index || 0;
-                const tIdx = nodePositions[target]?.index || 0;
-                const pairKey = Math.min(sIdx, tIdx) + '-' + Math.max(sIdx, tIdx);
+                impactTypes.forEach((impact, typeIdx) => {
+                    const group = impactGroups[impact];
 
-                if (!pairCounts[pairKey]) pairCounts[pairKey] = 0;
-                const offset = (pairCounts[pairKey] - 0.5) * 15; // Spread by 15px
-                pairCounts[pairKey]++;
+                    // Calculate max relevance for this impact group
+                    const maxRelevance = group.reduce((max, c) => {
+                        const w = relevanceWidth[c.relevance] || 1;
+                        return w > max ? w : max;
+                    }, 1);
 
-                linkData.push({
-                    source, target, impactType,
-                    weight: maxRelevance,
-                    count: conn.length,
-                    offset: offset,
-                    index: idx,
-                    allImpacts: impacts // Store all individual impact values for filtering
+                    // Map impact symbol to internal type name
+                    const impactType = impact === '(-)' ? 'negative' :
+                                      impact === '(+)' ? 'positive' :
+                                      impact === '(-/+)' ? 'mixed' : 'unknown';
+
+                    // Calculate offset to spread multiple impact types apart
+                    // Center the group of lines around the baseline
+                    const spreadAmount = 12; // pixels between each impact type line
+                    const offset = (typeIdx - (numTypes - 1) / 2) * spreadAmount;
+
+                    linkData.push({
+                        source, target,
+                        impactType,
+                        impact, // Keep original impact symbol for filtering
+                        weight: maxRelevance,
+                        count: group.length,
+                        offset: offset,
+                        totalTypes: numTypes
+                    });
                 });
             });
 
@@ -1231,61 +1349,109 @@
 
             const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
 
-            // Create matrix data
-            const matrixData = [];
+            // Create separate cell data for each impact type
+            const cellData = [];
             nodes.forEach((source, i) => {
                 nodes.forEach((target, j) => {
                     const key = `${source}-${target}`;
                     const conn = connections[key] || [];
-                    let impactType = '?';
-                    let maxWeight = 0;
-                    let mainImpact = 'unknown';
-                    let relevanceLevel = 'low';
 
-                    if (conn.length > 0) {
-                        const neg = conn.filter(c => c.impact === '(-)').length;
-                        const pos = conn.filter(c => c.impact === '(+)').length;
-                        impactType = neg >= pos ? '(-)' : '(+)';
-                        if (conn.some(c => c.impact === '(-/+)')) impactType = '(-/+)';
-                        maxWeight = Math.max(...conn.map(c => relevanceWidth[c.relevance] || 1));
+                    if (conn.length === 0) {
+                        // Empty cell
+                        cellData.push({
+                            source, target,
+                            row: i, col: j,
+                            impact: null,
+                            count: 0,
+                            weight: 0,
+                            x: j * size,
+                            y: i * size,
+                            width: size - 2,
+                            height: size - 2
+                        });
+                    } else {
+                        // Group connections by impact type
+                        const impactGroups = {};
+                        conn.forEach(c => {
+                            if (!impactGroups[c.impact]) impactGroups[c.impact] = [];
+                            impactGroups[c.impact].push(c);
+                        });
 
-                        // Map impact type to internal name
-                        mainImpact = impactType === '(-)' ? 'negative' : impactType === '(+)' ? 'positive' : impactType === '(-/+)' ? 'mixed' : 'unknown';
+                        const impacts = Object.keys(impactGroups);
+                        const numImpacts = impacts.length;
+                        const cellWidth = size - 2;
+                        const cellHeight = size - 2;
 
-                        // Determine relevance level
-                        if (maxWeight >= 3) relevanceLevel = 'high';
-                        else if (maxWeight >= 2) relevanceLevel = 'medium';
-                        else relevanceLevel = 'low';
+                        // Subdivide the cell horizontally for each impact type
+                        const subWidth = cellWidth / numImpacts;
+
+                        impacts.forEach((impact, idx) => {
+                            const group = impactGroups[impact];
+                            const maxWeight = Math.max(...group.map(c => relevanceWidth[c.relevance] || 1));
+
+                            cellData.push({
+                                source, target,
+                                row: i, col: j,
+                                impact: impact,
+                                count: group.length,
+                                weight: maxWeight,
+                                x: j * size + idx * subWidth,
+                                y: i * size,
+                                width: subWidth,
+                                height: cellHeight,
+                                totalCount: conn.length
+                            });
+                        });
                     }
-
-                    matrixData.push({
-                        source, target,
-                        row: i, col: j,
-                        count: conn.length,
-                        impactType, weight: maxWeight,
-                        mainImpact, relevanceLevel,
-                        allImpacts: conn.map(c => c.impact) // Store all individual impact values for filtering
-                    });
                 });
             });
 
-            // Draw cells
+            // Draw subdivided cells
             g.selectAll('.matrix-cell')
-                .data(matrixData)
+                .data(cellData)
                 .join('rect')
                 .attr('class', 'matrix-cell')
-                .attr('x', d => d.col * size)
-                .attr('y', d => d.row * size)
-                .attr('width', size - 2)
-                .attr('height', size - 2)
-                .attr('fill', d => d.count > 0 ? impactColors[d.impactType] : 'rgba(255,255,255,0.03)')
-                .attr('opacity', d => d.count > 0 ? 0.3 + d.weight * 0.15 : 1)
-                .attr('rx', 4)
+                .attr('x', d => d.x)
+                .attr('y', d => d.y)
+                .attr('width', d => d.width)
+                .attr('height', d => d.height)
+                .attr('fill', d => d.impact ? impactColors[d.impact] : 'rgba(255,255,255,0.03)')
+                .attr('opacity', d => d.count > 0 ? 0.4 + d.weight * 0.15 : 1)
+                .attr('rx', d => d.count === 0 ? 4 : 2)
                 .on('mouseover', function(event, d) {
                     if (d.count > 0) {
                         d3.select(this).attr('stroke', '#fff').attr('stroke-width', 2);
-                        const content = getTooltipContent(d.source, d.target);
-                        if (content) showTooltip(event, content);
+                        // Show tooltip for this specific impact type
+                        const key = `${d.source}-${d.target}`;
+                        const conn = connections[key] || [];
+                        const impactConn = conn.filter(c => c.impact === d.impact);
+
+                        let processesHtml = impactConn.slice(0, 3).map(c => `
+                            <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                    <span class="tooltip-impact ${c.impact === '(-)' ? 'negative' : c.impact === '(+)' ? 'positive' : c.impact === '(-/+)' ? 'mixed' : 'unknown'}">${c.impact}</span>
+                                    <span class="tooltip-muted" style="font-size: 0.7rem;">Relevance: ${c.relevance}</span>
+                                </div>
+                                <div class="tooltip-value" style="font-size: 0.8rem; margin-bottom: 4px;">${c.process}</div>
+                                <div class="tooltip-literature">${c.literature || 'No reference'}</div>
+                            </div>
+                        `).join('');
+
+                        if (impactConn.length > 3) {
+                            processesHtml += `<div class="tooltip-muted" style="font-size: 0.75rem;">...and ${impactConn.length - 3} more</div>`;
+                        }
+
+                        const impactLabel = d.impact === '(-)' ? 'Negative' : d.impact === '(+)' ? 'Positive' : d.impact === '(-/+)' ? 'Mixed' : 'Unknown';
+                        const content = `
+                            <div class="tooltip-header">
+                                <span style="color: ${pbColors[d.source]}; font-weight: bold;">${d.source}</span>
+                                <span class="tooltip-arrow">→</span>
+                                <span style="color: ${pbColors[d.target]}; font-weight: bold;">${d.target}</span>
+                                <span class="tooltip-muted" style="font-size: 0.8rem;">(${impactConn.length} ${impactLabel} interaction${impactConn.length > 1 ? 's' : ''})</span>
+                            </div>
+                            ${processesHtml}
+                        `;
+                        showTooltip(event, content);
                     }
                 })
                 .on('mouseout', function() {
@@ -1293,12 +1459,27 @@
                     hideTooltip();
                 });
 
-            // Cell labels (count)
+            // Cell labels (total count) - only show once per cell
+            const cellTotals = [];
+            nodes.forEach((source, i) => {
+                nodes.forEach((target, j) => {
+                    const key = `${source}-${target}`;
+                    const conn = connections[key] || [];
+                    if (conn.length > 0) {
+                        cellTotals.push({
+                            row: i, col: j,
+                            count: conn.length
+                        });
+                    }
+                });
+            });
+
             g.selectAll('.matrix-count')
-                .data(matrixData.filter(d => d.count > 0))
+                .data(cellTotals)
                 .join('text')
-                .attr('x', d => d.col * size + size / 2)
-                .attr('y', d => d.row * size + size / 2)
+                .attr('class', 'matrix-count')
+                .attr('x', d => d.col * size + (size - 2) / 2)
+                .attr('y', d => d.row * size + (size - 2) / 2)
                 .attr('text-anchor', 'middle')
                 .attr('dominant-baseline', 'middle')
                 .attr('fill', '#fff')
@@ -1447,45 +1628,18 @@
                 // Highlight arcs and ribbons for this PB
                 const idx = nodeIndex[value];
                 arcs.style('opacity', d => d.index === idx ? 1 : 0.15);
-                ribbons.style('opacity', d => d.source.index === idx || d.target.index === idx ? 0.85 : 0.05);
+                ribbons.style('opacity', d => d.sourceIndex === idx || d.targetIndex === idx ? 0.85 : 0.05);
             } else if (type === 'impact') {
-                // Highlight ribbons by impact type and change their color to match
-                ribbons
-                    .style('opacity', d => {
-                        const sourceNode = nodes[d.source.index];
-                        const targetNode = nodes[d.target.index];
-                        const conn = connections[`${sourceNode}-${targetNode}`] || [];
-                        const hasImpact = conn.some(c => c.impact === value);
-                        return hasImpact ? 0.85 : 0.05;
-                    })
-                    .attr('fill', d => {
-                        const sourceNode = nodes[d.source.index];
-                        const targetNode = nodes[d.target.index];
-                        const conn = connections[`${sourceNode}-${targetNode}`] || [];
-                        const hasImpact = conn.some(c => c.impact === value);
-                        // If this ribbon has the selected impact, color it with that impact's color
-                        return hasImpact ? impactColors[value] : '#95a5a6';
-                    });
+                // Each ribbon now has its own impact type, so directly check it
+                ribbons.style('opacity', d => d.impact === value ? 0.85 : 0.05);
                 arcs.style('opacity', 0.4);
             }
         }
 
         function resetChordHighlight() {
             const ribbons = d3.select('#chart-chord').selectAll('.chord-path');
-            // Reset opacity
+            // Reset opacity - each ribbon keeps its original color (already set by impact)
             ribbons.style('opacity', 0.7);
-            // Reset fill color to original (based on dominant impact)
-            ribbons.attr('fill', d => {
-                const key = `${nodes[d.source.index]}-${nodes[d.target.index]}`;
-                const conn = connections[key];
-                if (conn) {
-                    const neg = conn.filter(c => c.impact === '(-)').length;
-                    const pos = conn.filter(c => c.impact === '(+)').length;
-                    if (neg >= pos) return impactColors['(-)'];
-                    return impactColors['(+)'];
-                }
-                return '#95a5a6';
-            });
             d3.select('#chart-chord').selectAll('.chord-arc').style('opacity', 1);
         }
 
@@ -1504,8 +1658,8 @@
                     return nodeKey === value ? 1 : 0.3;
                 });
             } else if (type === 'impact') {
-                // Filter by checking if ANY connection has this impact type
-                links.attr('stroke-opacity', d => d.allImpacts.includes(value) ? 0.9 : 0.03);
+                // Filter by checking if this link's impact matches
+                links.attr('stroke-opacity', d => d.impact === value ? 0.9 : 0.03);
                 symbols.attr('opacity', 0.5);
             } else if (type === 'relevance') {
                 links.attr('stroke-opacity', d => {
@@ -1535,15 +1689,17 @@
                 rowLabels.attr('opacity', (d, i) => i === idx ? 1 : 0.3);
                 colLabels.attr('opacity', (d, i) => i === idx ? 1 : 0.3);
             } else if (type === 'impact') {
-                // Filter by checking if ANY connection has this impact type
-                cells.attr('opacity', d => d.allImpacts.includes(value) ? 1 : 0.15);
+                // Each cell now has its own impact type, so directly check it
+                cells.attr('opacity', d => d.impact === value ? 1 : 0.15);
                 rowLabels.attr('opacity', 0.5);
                 colLabels.attr('opacity', 0.5);
             } else if (type === 'relevance') {
                 cells.attr('opacity', d => {
-                    if (value === 'high') return d.relevanceLevel === 'high' ? 1 : 0.15;
-                    if (value === 'medium') return d.relevanceLevel === 'medium' ? 1 : 0.15;
-                    if (value === 'low') return d.relevanceLevel === 'low' ? 1 : 0.15;
+                    if (d.count === 0) return 0.15;
+                    const relevanceLevel = d.weight >= 3 ? 'high' : d.weight >= 2 ? 'medium' : 'low';
+                    if (value === 'high') return relevanceLevel === 'high' ? 1 : 0.15;
+                    if (value === 'medium') return relevanceLevel === 'medium' ? 1 : 0.15;
+                    if (value === 'low') return relevanceLevel === 'low' ? 1 : 0.15;
                     return 0.15;
                 });
                 rowLabels.attr('opacity', 0.5);
@@ -1552,7 +1708,8 @@
         }
 
         function resetMatrixHighlight() {
-            d3.select('#chart-matrix').selectAll('.matrix-cell').attr('opacity', 1);
+            const cells = d3.select('#chart-matrix').selectAll('.matrix-cell');
+            cells.attr('opacity', d => d.count > 0 ? 0.4 + d.weight * 0.15 : 1);
             d3.select('#chart-matrix').selectAll('.row-label').attr('opacity', 1);
             d3.select('#chart-matrix').selectAll('.col-label').attr('opacity', 1);
         }
