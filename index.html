@@ -1600,6 +1600,8 @@
 
             // PHC uses a specific order for the PBs
             const phcOrder = ['CC', 'NE', 'SO', 'AL', 'OA', 'BC', 'FW', 'LSC', 'BI'];
+            const phcIndex = {};
+            phcOrder.forEach((pb, i) => phcIndex[pb] = i);
 
             // Calculate angle for each PB
             const angleScale = d3.scaleLinear()
@@ -1652,80 +1654,110 @@
                 .attr('font-weight', 'bold')
                 .text(d => d);
 
-            // Prepare arrow data - group by source-target pair and impact type
-            const arrowData = [];
-
-            // First, organize connections by source-target pair
-            const pairData = {};
+            // Collect all arrows with their data
+            const allArrows = [];
             Object.keys(connections).forEach(key => {
                 const [source, target] = key.split('-');
-                if (source === target) return; // Skip self-connections
+                if (source === target) return;
                 if (!phcOrder.includes(source) || !phcOrder.includes(target)) return;
 
-                const conn = connections[key];
-                if (!pairData[key]) pairData[key] = [];
-
-                conn.forEach(c => {
-                    pairData[key].push(c);
-                });
-            });
-
-            // Calculate spacing offsets for arrows from each PB
-            const pbOutgoingOffsets = {};
-            const pbIncomingOffsets = {};
-            phcOrder.forEach(pb => {
-                pbOutgoingOffsets[pb] = 0;
-                pbIncomingOffsets[pb] = 0;
-            });
-
-            // Count total outgoing/incoming width for spacing
-            const pbOutgoingWidth = {};
-            const pbIncomingWidth = {};
-            phcOrder.forEach(pb => {
-                pbOutgoingWidth[pb] = 0;
-                pbIncomingWidth[pb] = 0;
-            });
-
-            Object.keys(pairData).forEach(key => {
-                const [source, target] = key.split('-');
-                pairData[key].forEach(c => {
-                    const w = relevanceWidth[c.relevance] || 1;
-                    pbOutgoingWidth[source] += w + 1;
-                    pbIncomingWidth[target] += w + 1;
-                });
-            });
-
-            // Create arrows with proper spacing
-            Object.keys(pairData).forEach(key => {
-                const [source, target] = key.split('-');
-                const conns = pairData[key];
-
-                conns.forEach(c => {
-                    const weight = relevanceWidth[c.relevance] || 1;
-
-                    // Calculate start offset
-                    const startOffsetAngle = (pbOutgoingOffsets[source] - pbOutgoingWidth[source]/2 + weight/2) * 0.006;
-                    pbOutgoingOffsets[source] += weight + 1;
-
-                    // Calculate end offset
-                    const endOffsetAngle = (pbIncomingOffsets[target] - pbIncomingWidth[target]/2 + weight/2) * 0.006;
-                    pbIncomingOffsets[target] += weight + 1;
-
-                    arrowData.push({
+                connections[key].forEach(c => {
+                    allArrows.push({
                         source,
                         target,
                         impact: c.impact,
                         relevance: c.relevance,
                         process: c.process,
                         literature: c.literature,
-                        weight: weight,
-                        startAngle: pbAngles[source] + startOffsetAngle,
-                        endAngle: pbAngles[target] + endOffsetAngle
+                        weight: relevanceWidth[c.relevance] || 1
                     });
                 });
             });
 
-            // Function to create curved arrow path
+            // Calculate total width needed at each PB for proper spacing
+            // Each PB needs space for all outgoing and incoming arrows
+            const pbTotalWidth = {};
+            phcOrder.forEach(pb => pbTotalWidth[pb] = 0);
+
+            allArrows.forEach(arrow => {
+                pbTotalWidth[arrow.source] += arrow.weight + 0.5;
+                pbTotalWidth[arrow.target] += arrow.weight + 0.5;
+            });
+
+            // Track current offset at each PB, organized by target direction
+            // This ensures arrows going to nearby PBs are grouped together
+            const pbOffsetTrackers = {};
+            phcOrder.forEach(pb => {
+                pbOffsetTrackers[pb] = { used: 0 };
+            });
+
+            // Sort arrows by source, then by target position (clockwise from source)
+            const sortedArrows = [...allArrows].sort((a, b) => {
+                if (a.source !== b.source) {
+                    return phcIndex[a.source] - phcIndex[b.source];
+                }
+                // Sort by angular distance from source (clockwise)
+                const distA = (phcIndex[a.target] - phcIndex[a.source] + phcOrder.length) % phcOrder.length;
+                const distB = (phcIndex[b.target] - phcIndex[b.source] + phcOrder.length) % phcOrder.length;
+                return distA - distB;
+            });
+
+            // Assign start positions (where arrow leaves source PB)
+            const arrowStartOffsets = new Map();
+            sortedArrows.forEach(arrow => {
+                const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
+                const offset = pbOffsetTrackers[arrow.source].used;
+                arrowStartOffsets.set(key, offset);
+                pbOffsetTrackers[arrow.source].used += arrow.weight + 0.5;
+            });
+
+            // Reset trackers for end positions
+            phcOrder.forEach(pb => {
+                pbOffsetTrackers[pb] = { used: 0 };
+            });
+
+            // Sort arrows by target, then by source position (for incoming arrows)
+            const sortedByTarget = [...allArrows].sort((a, b) => {
+                if (a.target !== b.target) {
+                    return phcIndex[a.target] - phcIndex[b.target];
+                }
+                // Sort by angular distance from target (counter-clockwise)
+                const distA = (phcIndex[a.target] - phcIndex[a.source] + phcOrder.length) % phcOrder.length;
+                const distB = (phcIndex[b.target] - phcIndex[b.source] + phcOrder.length) % phcOrder.length;
+                return distB - distA;
+            });
+
+            // Assign end positions (where arrow arrives at target PB)
+            const arrowEndOffsets = new Map();
+            sortedByTarget.forEach(arrow => {
+                const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
+                const offset = pbOffsetTrackers[arrow.target].used;
+                arrowEndOffsets.set(key, offset);
+                pbOffsetTrackers[arrow.target].used += arrow.weight + 0.5;
+            });
+
+            // Build final arrow data with calculated positions
+            const spacingFactor = 0.008; // Controls how spread out arrows are along arc
+
+            const arrowData = allArrows.map(arrow => {
+                const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
+                const startOffset = arrowStartOffsets.get(key);
+                const endOffset = arrowEndOffsets.get(key);
+
+                // Center the offsets around the PB position
+                const startAngle = pbAngles[arrow.source] +
+                    (startOffset - pbTotalWidth[arrow.source]/2 + arrow.weight/2) * spacingFactor;
+                const endAngle = pbAngles[arrow.target] +
+                    (endOffset - pbTotalWidth[arrow.target]/2 + arrow.weight/2) * spacingFactor;
+
+                return {
+                    ...arrow,
+                    startAngle,
+                    endAngle
+                };
+            });
+
+            // Function to create curved arrow path with consistent curvature
             function createArrowPath(d) {
                 const startAngle = d.startAngle;
                 const endAngle = d.endAngle;
@@ -1737,16 +1769,28 @@
                 const x2 = Math.sin(endAngle) * r;
                 const y2 = -Math.cos(endAngle) * r;
 
-                // Calculate control point for quadratic bezier
-                // Pull the curve inward based on the angle difference
-                let angleDiff = endAngle - startAngle;
-                if (angleDiff < 0) angleDiff += 2 * Math.PI;
-                if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+                // Calculate the chord length and use it to determine curvature
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const chordLength = Math.sqrt(dx * dx + dy * dy);
 
-                const pullFactor = 1 - (angleDiff / Math.PI) * 0.7;
-                const midAngle = (startAngle + endAngle) / 2;
-                const cx = Math.sin(midAngle) * r * pullFactor;
-                const cy = -Math.cos(midAngle) * r * pullFactor;
+                // Use a consistent pull factor based on chord length
+                // This ensures similar curvature regardless of angular distance
+                const maxPull = r * 0.6; // Maximum inward pull
+                const pullAmount = Math.min(chordLength * 0.35, maxPull);
+
+                // Midpoint of the chord
+                const mx = (x1 + x2) / 2;
+                const my = (y1 + y2) / 2;
+
+                // Direction from center to midpoint (normalized)
+                const midDist = Math.sqrt(mx * mx + my * my);
+                const dirX = midDist > 0 ? mx / midDist : 0;
+                const dirY = midDist > 0 ? my / midDist : 0;
+
+                // Control point is pulled inward from the chord midpoint
+                const cx = mx - dirX * pullAmount;
+                const cy = my - dirY * pullAmount;
 
                 return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
             }
