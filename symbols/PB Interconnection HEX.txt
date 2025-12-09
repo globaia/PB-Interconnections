@@ -1,0 +1,9 @@
+aerosols	7f7f7f
+ocean		1f77b4
+biogeochemical	bcbd22
+freshwater	17becf
+land		8c564b
+biosphere	2ca02c
+climate		d62728
+entities	ff7f0e
+ozone		9467bd

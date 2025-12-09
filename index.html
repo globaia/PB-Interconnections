@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planetary Boundaries Interconnections</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        :root {
+            /* Dark theme (default) - dark grey */
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3a3a3a;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --accent-primary: #4facfe;
+            --accent-secondary: #00f2fe;
+            --border-color: rgba(79, 172, 254, 0.3);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --tooltip-bg: rgba(30, 30, 30, 0.98);
+            --stat-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f5f5f5;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e8e8e8;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #6a6a6a;
+            --accent-primary: #0066cc;
+            --accent-secondary: #0088cc;
+            --border-color: rgba(0, 102, 204, 0.3);
+            --card-bg: rgba(0, 0, 0, 0.03);
+            --card-border: rgba(0, 0, 0, 0.08);
+            --tooltip-bg: rgba(255, 255, 255, 0.98);
+            --stat-bg: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2rem;
+            background: linear-gradient(90deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--stat-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .theme-toggle:hover {
+            background: var(--card-bg);
+            border-color: var(--accent-primary);
+        }
+
+        .theme-toggle svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: var(--stat-bg);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-primary);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-tab {
+            background: var(--stat-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .nav-tab:hover {
+            background: var(--card-bg);
+            border-color: var(--accent-primary);
+        }
+
+        .nav-tab.active {
+            background: var(--card-bg);
+            border-color: var(--accent-primary);
+        }
+
+        .visualization-container {
+            display: none;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .visualization-container.active {
+            display: block;
+        }
+
+        .viz-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 15px;
+            gap: 8px;
+        }
+
+        .viz-title {
+            font-size: 1.4rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .viz-description {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            max-width: 700px;
+        }
+
+        .chart-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .legend {
+            background: var(--stat-bg);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 250px;
+            max-width: 300px;
+        }
+
+        .legend h3 {
+            margin-bottom: 15px;
+            color: var(--accent-primary);
+            font-size: 1rem;
+        }
+
+        .legend-section {
+            margin-bottom: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+
+        .legend-color {
+            width: 30px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        .legend-line {
+            height: 3px;
+            border-radius: 2px;
+            background: #fff;
+        }
+
+        .legend-line.high { width: 40px; }
+        .legend-line.medium { width: 25px; }
+        .legend-line.low { width: 12px; }
+
+        .tooltip {
+            position: fixed;
+            background: var(--tooltip-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            max-width: 420px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            color: var(--text-primary);
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .tooltip-arrow {
+            color: var(--accent-primary);
+            font-size: 1.2rem;
+        }
+
+        .tooltip-impact {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .tooltip-impact.negative { background: rgba(231, 76, 60, 0.3); color: #e74c3c; }
+        .tooltip-impact.positive { background: rgba(46, 204, 113, 0.3); color: #2ecc71; }
+        .tooltip-impact.mixed { background: rgba(241, 196, 15, 0.3); color: #f1c40f; }
+        .tooltip-impact.unknown { background: rgba(149, 165, 166, 0.3); color: #95a5a6; }
+
+        .tooltip-section {
+            margin-bottom: 10px;
+        }
+
+        .tooltip-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .tooltip-value {
+            color: var(--text-primary);
+            line-height: 1.4;
+        }
+
+        .tooltip-literature {
+            color: var(--accent-primary);
+            font-style: italic;
+            font-size: 0.8rem;
+        }
+
+        .tooltip-muted {
+            color: var(--text-secondary);
+        }
+
+        .node-label {
+            font-weight: 600;
+            font-size: 11px;
+            fill: var(--text-primary);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        [data-theme="light"] .node-label {
+            text-shadow: 0 1px 2px rgba(255,255,255,0.5);
+        }
+
+        /* SVG text color overrides for light theme */
+        [data-theme="light"] svg text {
+            fill: var(--text-primary);
+        }
+
+        [data-theme="light"] svg text[fill] {
+            /* Preserve colored labels */
+        }
+
+        /* Edge bundle and matrix text labels */
+        svg .edge-label,
+        svg .matrix-count {
+            fill: var(--text-primary);
+        }
+
+        /* Axis labels */
+        svg .axis-label {
+            fill: var(--text-secondary);
+        }
+
+        .link {
+            fill: none;
+            stroke-opacity: 0.6;
+            transition: stroke-opacity 0.2s, stroke-width 0.2s;
+        }
+
+        .link:hover {
+            stroke-opacity: 1;
+        }
+
+        .link.faded {
+            stroke-opacity: 0.05;
+        }
+
+        /* Edge bundling styles */
+        .edge-bundle-link {
+            fill: none;
+            pointer-events: stroke;
+            transition: stroke-opacity 0.15s, stroke-width 0.15s;
+        }
+
+        .edge-bundle-link.highlighted {
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        /* Matrix styles */
+        .matrix-cell {
+            cursor: pointer;
+            transition: opacity 0.15s;
+        }
+
+        .matrix-label {
+            font-size: 10px;
+            fill: var(--text-primary);
+        }
+
+        .instructions {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 15px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .control-group select, .control-group input {
+            background: var(--stat-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+        }
+
+        /* Caption styles */
+        .viz-caption {
+            margin-top: 25px;
+            padding: 20px;
+            background: var(--stat-bg);
+            border-radius: 12px;
+            border-left: 4px solid var(--accent-primary);
+        }
+
+        .viz-caption p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .viz-caption p:last-child {
+            margin-bottom: 0;
+        }
+
+        .viz-caption strong {
+            color: var(--text-primary);
+        }
+
+        .arrow-marker {
+            fill: currentColor;
+        }
+
+        /* PB Symbol styles */
+        .pb-symbol {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-item .pb-symbol {
+            width: 24px;
+            height: 24px;
+        }
+
+        .pb-label-with-symbol {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Interactive legend items */
+        .legend-item.interactive {
+            cursor: pointer;
+            padding: 6px 8px;
+            margin: -6px -8px;
+            margin-bottom: 2px;
+            border-radius: 8px;
+            transition: background 0.2s ease, transform 0.15s ease;
+        }
+
+        .legend-item.interactive:hover {
+            background: var(--border-color);
+            transform: translateX(4px);
+        }
+
+        .legend-item.interactive.active {
+            background: var(--border-color);
+        }
+
+        .legend-item.interactive .pb-symbol {
+            transition: transform 0.15s ease;
+        }
+
+        .legend-item.interactive:hover .pb-symbol {
+            transform: scale(1.15);
+        }
+
+        /* SVG element transitions for smooth highlighting */
+        .chord-path, .chord-arc, .matrix-cell, .edge-bundle-link, .row-label, .col-label {
+            transition: opacity 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle Button -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" style="display: none;">
+            <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24">
+            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+        </svg>
+        <span class="theme-label">Light mode</span>
+    </button>
+
+    <div class="container">
+        <h1>Planetary Boundaries Interconnections</h1>
+        <p class="subtitle">Interactive visualization of how planetary boundaries affect each other</p>
+
+        <div class="stats" id="stats"></div>
+
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-viz="chord">Chord Diagram</button>
+            <button class="nav-tab" data-viz="edge-bundle">Hierarchical Edge Bundling</button>
+            <button class="nav-tab" data-viz="matrix">Adjacency Matrix</button>
+        </div>
+
+        <!-- Chord Diagram -->
+        <div class="visualization-container active" id="viz-chord">
+            <div class="viz-header">
+                <h2 class="viz-title">Chord Diagram</h2>
+                <p class="viz-description">Shows the volume of interactions between boundaries. Hover over arcs to highlight connections.</p>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart-chord"></div>
+                <div class="legend" id="legend-chord"></div>
+            </div>
+            <div class="viz-caption">
+                <p><strong>The Causal Network of Planetary Boundary Processes:</strong> The diagram shows the most significant and best understood interconnections between Planetary Boundary (PB) processes and the most important drivers of transgression. Colored arrows indicate a connection between two PB processes, with the color denoting the source PB process. The width of the arrow represents the estimated relative strength of the connection, while the line style (solid, dashed, dotted) indicates the nature of the connection (positive, negative, or both). Numbers associated with PB processes denote the most important drivers of PB transgression, as defined above. These drivers can be linked to multiple boundaries simultaneously.</p>
+                <p><strong>Key takeaway:</strong> The interconnections between PBs are multidirectional and vary in strength. Addressing one issue often implies the need to address several others at the same time. For example, the health of the biosphere cannot be ensured without managing all other PB processes. When this is done correctly, what initially seems like a challenging task can lead to significant benefits across different processes.</p>
+            </div>
+        </div>
+
+        <!-- Hierarchical Edge Bundling -->
+        <div class="visualization-container" id="viz-edge-bundle">
+            <div class="viz-header">
+                <h2 class="viz-title">Hierarchical Edge Bundling</h2>
+                <p class="viz-description">Curved paths show directional relationships with arrows. Line thickness = relevance, color = impact type. Hover to isolate connections.</p>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Tension:</label>
+                        <input type="range" id="tension-slider" min="0" max="100" value="70">
+                    </div>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart-edge-bundle"></div>
+                <div class="legend" id="legend-edge-bundle"></div>
+            </div>
+            <div class="viz-caption">
+                <p><strong>The Causal Network of Planetary Boundary Processes:</strong> The diagram shows the most significant and best understood interconnections between Planetary Boundary (PB) processes and the most important drivers of transgression. Colored arrows indicate a connection between two PB processes, with the color denoting the source PB process. The width of the arrow represents the estimated relative strength of the connection, while the line style (solid, dashed, dotted) indicates the nature of the connection (positive, negative, or both). Numbers associated with PB processes denote the most important drivers of PB transgression, as defined above. These drivers can be linked to multiple boundaries simultaneously.</p>
+                <p><strong>Key takeaway:</strong> The interconnections between PBs are multidirectional and vary in strength. Addressing one issue often implies the need to address several others at the same time. For example, the health of the biosphere cannot be ensured without managing all other PB processes. When this is done correctly, what initially seems like a challenging task can lead to significant benefits across different processes.</p>
+            </div>
+        </div>
+
+        <!-- Adjacency Matrix -->
+        <div class="visualization-container" id="viz-matrix">
+            <div class="viz-header">
+                <h2 class="viz-title">Adjacency Matrix</h2>
+                <p class="viz-description">Grid showing all pairwise interactions. Rows = drivers, columns = affected. Color = impact, opacity = relevance.</p>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart-matrix"></div>
+                <div class="legend" id="legend-matrix"></div>
+            </div>
+            <div class="viz-caption">
+                <p><strong>The Causal Network of Planetary Boundary Processes:</strong> The diagram shows the most significant and best understood interconnections between Planetary Boundary (PB) processes and the most important drivers of transgression. Colored arrows indicate a connection between two PB processes, with the color denoting the source PB process. The width of the arrow represents the estimated relative strength of the connection, while the line style (solid, dashed, dotted) indicates the nature of the connection (positive, negative, or both). Numbers associated with PB processes denote the most important drivers of PB transgression, as defined above. These drivers can be linked to multiple boundaries simultaneously.</p>
+                <p><strong>Key takeaway:</strong> The interconnections between PBs are multidirectional and vary in strength. Addressing one issue often implies the need to address several others at the same time. For example, the health of the biosphere cannot be ensured without managing all other PB processes. When this is done correctly, what initially seems like a challenging task can lead to significant benefits across different processes.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        // ============================================
+        // DATA SETUP
+        // ============================================
+
+        const rawData = [
+  {"source":"Ocean Acidification (OA)","target":"BI","process":"Increased degradation of coral reefs can lead to collapse of marine food webs.","impact":"(-)","relevance":"medium","literature":"Hoegh-Guldberg et al. 2017; Doney et al. 2009"},
+  {"source":"Ocean Acidification (OA)","target":"BI","process":"increased OA can lead to a reduction in calicifying species and to the loss of habitat forming species","impact":"(-)","relevance":"medium","literature":"Doney et al. 2009; Teixidó et al. 2024"},
+  {"source":"Ocean Acidification (OA)","target":"BI","process":"Increased pCO2 can lead to increased photosynthesis rates","impact":"(+)","relevance":"low","literature":"Das and Mangwani 2015"},
+  {"source":"Ocean Acidification (OA)","target":"AL","process":"Decreasing pH can increases the potential for high dimethyl sulfides emissions by phytoplankton","impact":"(-)","relevance":"low","literature":"Das and Mangwani 2015, Deng et al. 2021, Fung et al. 2022"},
+  {"source":"Ocean Acidification (OA)","target":"BC","process":"OA can lead to changes in nitrification and nitrogen fixation","impact":"(-/+)","relevance":"low","literature":"Shi et al. 2012, Wannicke et al. 2018"},
+  {"source":"Ocean Acidification (OA)","target":"CC","process":"OA can decrease the capacity of organisms to form carbonate shells, which allows oceans to absorb more CO2","impact":"(+)","relevance":"low","literature":"Lade et al. 2019"},
+  {"source":"Ocean Acidification (OA)","target":"NE","process":"Ocean acidification can alter the chemical behavior of pollutants, such as heavy metals","impact":"?","relevance":"low","literature":"Jin et al. 2021"},
+  {"source":"Freshwater Change (FW)","target":"BI","process":"Changes in streamflow (e.g. by dams) can causes habitat destruction","impact":"(-)","relevance":"low","literature":"Gleeson et al. 2020, Broadley et al. 2022"},
+  {"source":"Freshwater Change (FW)","target":"BI","process":"Changes in streamflow and soil moisture alter transport and availability of nutrients","impact":"(-/+)","relevance":"low","literature":"Gleeson et al. 2020, Lie et al. 2024"},
+  {"source":"Freshwater Change (FW)","target":"BI","process":"reduction in river flow/drain aquifers can lead to salinization and decrease productivity","impact":"(-)","relevance":"low","literature":"Lade et al. SM, Broadley et al. 2022"},
+  {"source":"Freshwater Change (FW)","target":"CC","process":"Soil moisture, surface water and frozen water can alter earth surface albedo","impact":"(-)","relevance":"low","literature":"Maina et al. 2022,"},
+  {"source":"Freshwater Change (FW)","target":"BC","process":"Changes in streamflow and soil moisture alter transport of nutrients","impact":"(-/+)","relevance":"low","literature":"Gleeson et al. 2020, Lie et al. 2024"},
+  {"source":"Freshwater Change (FW)","target":"LSC","process":"Reduction of soil moisture/green water flow can lead to desertification/land degradation","impact":"(-)","relevance":"high","literature":"AbdelRahman 2023"},
+  {"source":"Biosphere Integrity (BI)","target":"CC","process":"Loss of biodiversity and ecosystem degradation can reduce the capacity for carbon uptake","impact":"(-)","relevance":"high","literature":"Bustamante et al. 2015, Lade et al. 2020, Poorter et al. 2015, Cardinale et al. 2012"},
+  {"source":"Biosphere Integrity (BI)","target":"CC","process":"Increased productivity due to increased eutrophication can lead to increased GHG (Methane) emissions","impact":"(-)","relevance":"medium","literature":"Beaulieu et al. 2019, Lade et al,. 2020, Rocher-Ros et al. 2023"},
+  {"source":"Biosphere Integrity (BI)","target":"CC","process":"Reduced biodiversity leads to a reduction of CO2 uptake in oceans","impact":"(-)","relevance":"medium","literature":"Gruber et al. 2023, Lade et al. 2020, Nash et al. 2017"},
+  {"source":"Biosphere Integrity (BI)","target":"BC","process":"Biodiversity loss can alter nutrient cycles and lead to nutrients being added to ecosystems","impact":"(-/+)","relevance":"low","literature":"Cui et al. 2022"},
+  {"source":"Biosphere Integrity (BI)","target":"LSC","process":"Degraded biosphere integrity can increase the vulnerability of forests to shocks or pests","impact":"(-)","relevance":"high","literature":"Bustamante et al. 2015, Poorter et al. 2015"},
+  {"source":"Biosphere Integrity (BI)","target":"FW","process":"Loss of ecosystem functions reduce the capability to regulate the hydrological cycle that can lead to changes in water availability and quality","impact":"(-)","relevance":"medium","literature":"Harrison et al. 2014"},
+  {"source":"Biosphere Integrity (BI)","target":"OA","process":"Decline in coral reefs and phytoplankton can excaerbate ocean acidifcation","impact":"(-)","relevance":"low","literature":"Cornwall et al. 2021, Zhang et al. 2023"},
+  {"source":"Biosphere Integrity (BI)","target":"NE","process":"The capacity of ecosystems to degrade and assimilate pollutants is reduced leading to higher concentrations of harmful substances","impact":"(-)","relevance":"low","literature":"Ferreira et al 2023"},
+  {"source":"Stratospheric Ozone depletion (SO)","target":"CC","process":"Reduced absorbtion of UV in the stratosphere increases the UV radiation at Earth's surface","impact":"(-)","relevance":"low","literature":"Lade et al. 2019"},
+  {"source":"Stratospheric Ozone depletion (SO)","target":"BI","process":"Reduced absorbtion of UV in the stratosphere increases UV radiation at Earth's surface with the potential to damage DNA and impair photosynthesis","impact":"(-)","relevance":"low","literature":"Lade et al, EEPA 2019"},
+  {"source":"Stratospheric Ozone depletion (SO)","target":"AL","process":"Changes in UV radiation can influence the production of aerosols through chemical reactions in the atmosphere.","impact":"(-/+)","relevance":"low","literature":"Lade et al. 2019"},
+  {"source":"Biogeochemical Flows (BC)","target":"BI","process":"Nutrient runoff can degrade soil by increased acidification, eutrophication and simplification of ecosystems","impact":"(-)","relevance":"low","literature":"Lade et al. 2019"},
+  {"source":"Biogeochemical Flows (BC)","target":"BI","process":"Nutrient runoff from agricultural application into freshwater can lead to algal blooms, dead zones, loss of fish","impact":"(-)","relevance":"medium","literature":"Lade et al. 2019"},
+  {"source":"Biogeochemical Flows (BC)","target":"BI","process":"Nutrient runoff into the ocean can lead to large scale ocean hypocix events, having strong impacts on the ocean ecosystems","impact":"(-)","relevance":"low","literature":"Lade et al. 2019, Rockström et al. 2009"},
+  {"source":"Biogeochemical Flows (BC)","target":"LSC","process":"Excessive use of fertilizers can lead to soil degradation (farmland)","impact":"(-)","relevance":"medium","literature":"Lade et al. 2019"},
+  {"source":"Biogeochemical Flows (BC)","target":"FW","process":"Nutrient runoff from agriculture, sewage and indutrial processes can degrade freshwater quality","impact":"(-)","relevance":"medium","literature":"du Plessis 2022"},
+  {"source":"Biogeochemical Flows (BC)","target":"AL","process":"Nitrogen compounds, particularly ammonia (NH3) from agriculture, can contribute to the formation of fine particulate matter (PM2.5) in the atmosphere.","impact":"(-)","relevance":"medium","literature":"Lade et al. 2019, Gu et al. 2021"},
+  {"source":"Biogeochemical Flows (BC)","target":"SO","process":"Application of N fertilizers can lead to N2O emissions that depleets ozone in the stratosphere","impact":"(-)","relevance":"low","literature":"Lade et al. 2019, Campbel et al. 2017"},
+  {"source":"Land system change (LSC)","target":"CC","process":"Deforestation and land conversion can reduce the capacity of these systems to absorb CO2, contributing to higher atmospheric CO2","impact":"(-)","relevance":"high","literature":"Lade et al. 2020"},
+  {"source":"Land system change (LSC)","target":"CC","process":"Changes in land cover can alter the surface albedo. This affects the radiatvie forcing","impact":"(+)","relevance":"high","literature":"Gibbard et al. 2005, Andrews et al. 2016"},
+  {"source":"Land system change (LSC)","target":"BI","process":"Land conversion can lead to habitat loss. Fragmentation of habitats can isolate populations, reducing genetic diversity","impact":"(-)","relevance":"high","literature":"Lade et al. 2020, Lade et al. 2019, Campbell et al. 2017, Alkemade et al. 2009"},
+  {"source":"Land system change (LSC)","target":"BI","process":"Forest cover loss can lead to decreased water quality, altered flows etc. reducing species diversity","impact":"(-)","relevance":"low","literature":"Semenchuk et al. 2022"},
+  {"source":"Land system change (LSC)","target":"BI","process":"Land system change can disrupt ecosystem services such as pollination, water purification, soil stabilization","impact":"(-)","relevance":"medium","literature":"Bennet et al. 2020,du Plessis 2022, Delelegn et al. 2017, Borelli et al. 2020"},
+  {"source":"Land system change (LSC)","target":"FW","process":"Land system change can increase river discharge","impact":"(+)","relevance":"low/medium","literature":"Lade et al. 2020"},
+  {"source":"Land system change (LSC)","target":"FW","process":"Deforestation can impact the hydrological cycle by reducing evapotranspiration and subsequent drying of the atmosphere","impact":"(-)","relevance":"medium","literature":"Xu et al. 2022"},
+  {"source":"Land system change (LSC)","target":"AL","process":"Forest fires (associated with land clearing), as well as cleared agricultural land emit large amounts of areosol","impact":"(-)","relevance":"medium","literature":"Lade et al. 2020"},
+  {"source":"Land system change (LSC)","target":"FW","process":"Deforestation (caused by drought which is likely due to climate change) can lead to eutrophication of drinking water reservoirs","impact":"(-)","relevance":"medium","literature":"Kong et al. 2022 https://doi.org/10.1016/j.watres.2022.118721"},
+  {"source":"Aerosol Loading (AL)","target":"CC","process":"Sulfate aerosols reflect sunlight, cooling the Earth's surface; Black carbon absorbs sunlight, warming the atmosphere","impact":"(-/+)","relevance":"medium","literature":"IPCC AR5, Chapter 7 Clouds and Aerosols, Quaas et al. 2022"},
+  {"source":"Aerosol Loading (AL)","target":"CC","process":"Aerosols act as cloud condensation nuclei, influencing cloud formation, properties and lifetimes. This can affect the energy balance as well as the hydrological cycle and climate dynamics","impact":"(-/+)","relevance":"medium","literature":"IPCC AR5, Chapter 7 Clouds and Aerosols"},
+  {"source":"Aerosol Loading (AL)","target":"BC","process":"changes of bioaerosols in the atmosphere can lead to changes in nutrient deposition","impact":"?","relevance":"low","literature":"Kanakindou et al. 2018, Fröhlich-Nowoisky et al. 2016"},
+  {"source":"Aerosol Loading (AL)","target":"BC","process":"Acidic rains can lead to soil acidification","impact":"(-)","relevance":"low","literature":"Grennfelt et al. 2020"},
+  {"source":"Aerosol Loading (AL)","target":"OA","process":"Some aerosols (e.g. thos containing sulfur compounds) can increase acidic rain. When entering the ocean, this can increase its acidification","impact":"(-)","relevance":"low","literature":"Doney et al. 2009"},
+  {"source":"Aerosol Loading (AL)","target":"BI","process":"Aerosol deposition can deliver nutrients like iron, stimulating net primary production","impact":"(+)","relevance":"low","literature":"Lade et al. 2020"},
+  {"source":"Aerosol Loading (AL)","target":"SO","process":"Aeorosols in the stratosphere can provide surfaces for heterogenous chemical reactions that can contribute to ozone depletion","impact":"(-)","relevance":"low","literature":"Solomon et al. 1987"},
+  {"source":"Aerosol Loading (AL)","target":"SO","process":"Areosols can absorb UV radiation therefore increasing the safe level of ozone depleation","impact":"(+)","relevance":"low","literature":"Lade et al. 2020"},
+  {"source":"Novel Entities (NE)","target":"BI","process":"Increase release of pesticides, industrial chemicals and heavy metals can intoxicate a wide range of organisms; leading diversity loss and disruption of ecosystem services","impact":"(-)","relevance":"high","literature":"Sigmund et al. 2023"},
+  {"source":"Novel Entities (NE)","target":"BI","process":"The release of genetically modified organisms can lead to genetic pollution, affecting genetic diversity","impact":"(-)","relevance":"low","literature":"Tsatsakis et al. 2017 https://doi.org/10.1016/j.fct.2017.06.033"},
+  {"source":"Novel Entities (NE)","target":"BI","process":"The interaction of released GMOs with environmental conditions may increase their fitness, competitive abilites, gene flow and effects on other biota","impact":"(-/+)","relevance":"low","literature":"Bauer-Panskus et al. 2020 DOI 10.1186/s12302-020-00301-0"},
+  {"source":"Novel Entities (NE)","target":"FW","process":"Increased release of pharmaceuticals, personal care products and industrial chemicals can contaminate freshwater systems","impact":"(-)","relevance":"medium","literature":"Richmond et al. 2017"},
+  {"source":"Novel Entities (NE)","target":"OA","process":"Abiotic plastic degradation can induce a decrease in seawater pH","impact":"(-)","relevance":"low","literature":"Romera-Castilla et al. 2023"},
+  {"source":"Novel Entities (NE)","target":"BC","process":"The use of synthetic fertilizer impacts nitrogen and phospherous nutrient cycles ","impact":"(+)","relevance":"high","literature":"Peter Søgaard Jørgensen et al. 2022, https://doi.org/10.1016/j.oneear.2022.09.011"},
+  {"source":"Novel Entities (NE)","target":"AL","process":"The release of volatile organic compounds and persistent organic pollutants can contribute to the formation of secondary aerosols","impact":"(-)","relevance":"high","literature":"Nault et al. 2021"},
+  {"source":"Novel Entities (NE)","target":"CC","process":"The use of genetically modified crops could decrease greenhouse gas emissions","impact":"(+)","relevance":"low","literature":"Kovak et al. 2022 https://doi.org/10.1016/j.tplants.2022.01.004"},
+  {"source":"Novel Entities (NE)","target":"BI","process":"Bt crops may negatively affect aquatic biota","impact":"(-)","relevance":"low","literature":"Pott et al. 2018 https://doi.org/10.1016/j.scitotenv.2018.04.013"},
+  {"source":"Novel Entities (NE)","target":"BI","process":"The use of Bt crops can select for resistant insect pests","impact":"(-)","relevance":"medium","literature":"Noack et al. 2023 doi:10.1126/science.ado9340"},
+  {"source":"Novel Entities (NE)","target":"BI","process":"The use of Bt crops can reduce use of insecticides","impact":"(+)","relevance":"medium","literature":"Noack et al. 2023 doi:10.1126/science.ado9340"},
+  {"source":"Climate Change (CC)","target":"BI","process":"Rising temperatures and shifting precipitation patterns lead to changing weather regimes that can affect biological events such as habitat loss, species extinction, migration and the introduction of invasive species","impact":"(-)","relevance":"high","literature":"Lade et al. 2020, Jaureguiberry et al. 2022"},
+  {"source":"Climate Change (CC)","target":"BI","process":"Extreme events and rising sea levels can lead to the salinisation of freshwater ecosystems","impact":"(-)","relevance":"medium","literature":"Lade et al. 2020"},
+  {"source":"Climate Change (CC)","target":"BC","process":"Increases in extreme precipitation events can lead to an increase of agricultural runoff","impact":"(-)","relevance":"low","literature":"Skidmore et al. 2023"},
+  {"source":"Climate Change (CC)","target":"LSC","process":"Climate stress on forests (e.g. increased frequency of wildfires and droughts) can lead to deforestation and land degradation","impact":"(-)","relevance":"high","literature":"Flore et al. 2024"},
+  {"source":"Climate Change (CC)","target":"FW","process":"Changes in precipitation patterns and the melting of glaciers can impact freshwater availability.","impact":"(-/+)","relevance":"medium","literature":"Konapala et al. 2020, Haeberli et al. 2020"},
+  {"source":"Climate Change (CC)","target":"FW","process":"Precipitation patterns can change due to climate change","impact":"(-/+)","relevance":"high","literature":"Lade et al. 2020"},
+  {"source":"Climate Change (CC)","target":"OA","process":"Increasing CO2 levels lead to an increased absorption of CO2 in the oceans, exacerbating ocean acidificcation","impact":"(-)","relevance":"high","literature":"Doney et al. 2009"},
+  {"source":"Climate Change (CC)","target":"OA","process":"Increasing temperatures can reduce the solubility of CO2 in water","impact":"(+)","relevance":"low","literature":"Lade et al. 2020"},
+  {"source":"Climate Change (CC)","target":"AL","process":"Increased droughts and changing atmospheric circulations can increase dust formation and distribution","impact":"(-)","relevance":"low","literature":"Zhao et al. 2019"},
+  {"source":"Climate Change (CC)","target":"SO","process":"Climate change reduces stratospheric temperatures due to heat beeing trapped at lower levels of the atmosphere, slowing ozone depleating chemical reactions and increasing the destruction of nitrous oxides","impact":"(+)","relevance":"low","literature":"Lade et al. 2019"},
+  {"source":"Climate Change (CC)","target":"NE","process":"Increasing temperatures can enhance the volatility of chemical pollutatnts, altering their atmospheric concentration","impact":"(-)","relevance":"low","literature":"Balbus et al. 2013, Bolan et al. 2023"}
+];
+
+        // Planetary Boundary names and abbreviations
+        const pbNames = {
+            'CC': 'Climate Change',
+            'BI': 'Biosphere Integrity',
+            'LSC': 'Land System Change',
+            'FW': 'Freshwater Change',
+            'BC': 'Biogeochemical Flows',
+            'OA': 'Ocean Acidification',
+            'AL': 'Aerosol Loading',
+            'SO': 'Stratospheric Ozone',
+            'NE': 'Novel Entities'
+        };
+
+        function getAbbrev(name) {
+            const match = name.match(/\(([A-Z]+)\)/);
+            return match ? match[1] : name;
+        }
+
+        const pbColors = {
+            'CC': '#d62728',  // Climate Change - red
+            'BI': '#2ca02c',  // Biosphere Integrity - green
+            'LSC': '#8c564b', // Land System Change - brown
+            'FW': '#17becf',  // Freshwater Change - cyan
+            'BC': '#bcbd22',  // Biogeochemical Flows - olive
+            'OA': '#1f77b4',  // Ocean Acidification - blue
+            'AL': '#7f7f7f',  // Aerosol Loading - grey
+            'SO': '#9467bd',  // Stratospheric Ozone - purple
+            'NE': '#ff7f0e'   // Novel Entities - orange
+        };
+
+        // Symbol file mappings for each PB
+        const pbSymbols = {
+            'CC': 'climate',
+            'BI': 'biosphere',
+            'LSC': 'land',
+            'FW': 'freshwater',
+            'BC': 'biogeochemical',
+            'OA': 'ocean',
+            'AL': 'aerosols',
+            'SO': 'ozone',
+            'NE': 'entities'
+        };
+
+        const impactColors = {
+            '(-)': '#e74c3c',
+            '(+)': '#2ecc71',
+            '(-/+)': '#f39c12',
+            '?': '#95a5a6'
+        };
+
+        const relevanceWidth = {
+            'high': 4,
+            'medium': 2,
+            'low': 1,
+            'low/medium': 1.5,
+            '?': 1
+        };
+
+        // Process data
+        const processedData = rawData.map(d => {
+            let target = d.target;
+            if (target.includes('/')) target = target.split('/')[0];
+            if (target.includes('(')) target = target.split(' ')[0];
+            return {
+                ...d,
+                sourceAbbrev: getAbbrev(d.source),
+                targetAbbrev: target
+            };
+        });
+
+        const nodes = Object.keys(pbNames);
+        const nodeIndex = {};
+        nodes.forEach((n, i) => nodeIndex[n] = i);
+
+        // Build connections map
+        const connections = {};
+        processedData.forEach(d => {
+            const key = `${d.sourceAbbrev}-${d.targetAbbrev}`;
+            if (!connections[key]) connections[key] = [];
+            connections[key].push({
+                process: d.process,
+                impact: d.impact,
+                relevance: d.relevance,
+                literature: d.literature
+            });
+        });
+
+        // Stats
+        const totalConnections = processedData.length;
+        const highRelevance = processedData.filter(d => d.relevance === 'high').length;
+        const negativeImpact = processedData.filter(d => d.impact === '(-)').length;
+
+        document.getElementById('stats').innerHTML = `
+            <div class="stat-item"><div class="stat-value">${totalConnections}</div><div class="stat-label">Total Connections</div></div>
+            <div class="stat-item"><div class="stat-value">${highRelevance}</div><div class="stat-label">High Relevance</div></div>
+            <div class="stat-item"><div class="stat-value">${Math.round(negativeImpact/totalConnections*100)}%</div><div class="stat-label">Negative Impacts</div></div>
+        `;
+
+        // Tooltip
+        const tooltip = document.getElementById('tooltip');
+
+        function showTooltip(event, content) {
+            tooltip.innerHTML = content;
+            tooltip.classList.add('visible');
+            const x = Math.min(event.clientX + 15, window.innerWidth - 450);
+            const y = Math.min(event.clientY + 15, window.innerHeight - 300);
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+        }
+
+        function hideTooltip() {
+            tooltip.classList.remove('visible');
+        }
+
+        function getTooltipContent(sourceAbbrev, targetAbbrev) {
+            const key = `${sourceAbbrev}-${targetAbbrev}`;
+            const conn = connections[key] || [];
+            if (conn.length === 0) return '';
+
+            let processesHtml = conn.slice(0, 3).map(c => `
+                <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span class="tooltip-impact ${c.impact === '(-)' ? 'negative' : c.impact === '(+)' ? 'positive' : c.impact === '(-/+)' ? 'mixed' : 'unknown'}">${c.impact}</span>
+                        <span class="tooltip-muted" style="font-size: 0.7rem;">Relevance: ${c.relevance}</span>
+                    </div>
+                    <div class="tooltip-value" style="font-size: 0.8rem; margin-bottom: 4px;">${c.process}</div>
+                    <div class="tooltip-literature">${c.literature || 'No reference'}</div>
+                </div>
+            `).join('');
+
+            if (conn.length > 3) {
+                processesHtml += `<div class="tooltip-muted" style="font-size: 0.75rem;">...and ${conn.length - 3} more</div>`;
+            }
+
+            return `
+                <div class="tooltip-header">
+                    <span style="color: ${pbColors[sourceAbbrev]}; font-weight: bold;">${sourceAbbrev}</span>
+                    <span class="tooltip-arrow">→</span>
+                    <span style="color: ${pbColors[targetAbbrev]}; font-weight: bold;">${targetAbbrev}</span>
+                    <span class="tooltip-muted" style="font-size: 0.8rem;">(${conn.length} interaction${conn.length > 1 ? 's' : ''})</span>
+                </div>
+                ${processesHtml}
+            `;
+        }
+
+        // Tab navigation
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.visualization-container').forEach(v => v.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`viz-${tab.dataset.viz}`).classList.add('active');
+            });
+        });
+
+        // Helper function to generate PB legend items with symbols (interactive)
+        function createPBLegendItems(vizType) {
+            return nodes.map(n => `
+                <div class="legend-item interactive" data-type="pb" data-value="${n}" data-viz="${vizType}">
+                    <img src="symbols/${pbSymbols[n]}.svg" alt="${pbNames[n]}" class="pb-symbol">
+                    <span><b>${n}</b> ${pbNames[n]}</span>
+                </div>
+            `).join('');
+        }
+
+        // Helper function to generate impact legend items (interactive)
+        function createImpactLegendItems(vizType) {
+            return `
+                <div class="legend-item interactive" data-type="impact" data-value="(-)" data-viz="${vizType}">
+                    <div class="legend-color" style="background: #e74c3c;"></div><span>Negative (-)</span>
+                </div>
+                <div class="legend-item interactive" data-type="impact" data-value="(+)" data-viz="${vizType}">
+                    <div class="legend-color" style="background: #2ecc71;"></div><span>Positive (+)</span>
+                </div>
+                <div class="legend-item interactive" data-type="impact" data-value="(-/+)" data-viz="${vizType}">
+                    <div class="legend-color" style="background: #f39c12;"></div><span>Mixed (-/+)</span>
+                </div>
+                <div class="legend-item interactive" data-type="impact" data-value="?" data-viz="${vizType}">
+                    <div class="legend-color" style="background: #95a5a6;"></div><span>Unknown (?)</span>
+                </div>
+            `;
+        }
+
+        // Helper function to generate relevance legend items (interactive)
+        function createRelevanceLegendItems(vizType, useLines = false) {
+            if (useLines) {
+                return `
+                    <div class="legend-item interactive" data-type="relevance" data-value="high" data-viz="${vizType}">
+                        <div class="legend-line high"></div><span>High</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="relevance" data-value="medium" data-viz="${vizType}">
+                        <div class="legend-line medium"></div><span>Medium</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="relevance" data-value="low" data-viz="${vizType}">
+                        <div class="legend-line low"></div><span>Low</span>
+                    </div>
+                `;
+            }
+            return `
+                <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                    <span>Thicker ribbons = higher relevance</span>
+                </div>
+            `;
+        }
+
+        // Create legend for Chord Diagram
+        function createChordLegend(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="legend-section">
+                    <h3>Impact Direction</h3>
+                    ${createImpactLegendItems('chord')}
+                </div>
+                <div class="legend-section">
+                    <h3>Relevance (Ribbon Width)</h3>
+                    ${createRelevanceLegendItems('chord', false)}
+                </div>
+                <div class="legend-section">
+                    <h3>Planetary Boundaries</h3>
+                    ${createPBLegendItems('chord')}
+                </div>
+            `;
+        }
+
+        // Create legend for Edge Bundling
+        function createEdgeBundleLegend(containerId) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = `
+                <div class="legend-section">
+                    <h3>Impact Direction</h3>
+                    ${createImpactLegendItems('edge-bundle')}
+                </div>
+                <div class="legend-section">
+                    <h3>Relevance (Line Thickness)</h3>
+                    ${createRelevanceLegendItems('edge-bundle', true)}
+                </div>
+                <div class="legend-section">
+                    <h3>Direction</h3>
+                    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                        <span>Arrows point from driver → affected boundary</span>
+                    </div>
+                </div>
+                <div class="legend-section">
+                    <h3>Planetary Boundaries</h3>
+                    ${createPBLegendItems('edge-bundle')}
+                </div>
+            `;
+        }
+
+        // ============================================
+        // 1. CHORD DIAGRAM
+        // ============================================
+        function createChordDiagram() {
+            const width = 700, height = 700;
+            const outerRadius = Math.min(width, height) * 0.5 - 80;
+            const innerRadius = outerRadius - 25;
+
+            const svg = d3.select('#chart-chord')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width/2},${height/2})`);
+
+            // Build matrix
+            const matrix = Array(nodes.length).fill(null).map(() => Array(nodes.length).fill(0));
+            processedData.forEach(d => {
+                const si = nodeIndex[d.sourceAbbrev], ti = nodeIndex[d.targetAbbrev];
+                if (si !== undefined && ti !== undefined) {
+                    matrix[si][ti] += relevanceWidth[d.relevance] || 1;
+                }
+            });
+
+            const chord = d3.chord().padAngle(0.05).sortSubgroups(d3.descending);
+            const chords = chord(matrix);
+            const arc = d3.arc().innerRadius(innerRadius).outerRadius(outerRadius);
+            const ribbon = d3.ribbon().radius(innerRadius - 3);
+
+            // Groups
+            const group = svg.append('g').selectAll('g').data(chords.groups).join('g');
+
+            group.append('path')
+                .attr('class', 'chord-arc')
+                .attr('fill', d => pbColors[nodes[d.index]])
+                .attr('stroke', d => d3.color(pbColors[nodes[d.index]]).darker())
+                .attr('d', arc)
+                .on('mouseover', function(event, d) {
+                    svg.selectAll('.chord-path').style('opacity', c =>
+                        c.source.index === d.index || c.target.index === d.index ? 0.8 : 0.1);
+                })
+                .on('mouseout', () => svg.selectAll('.chord-path').style('opacity', 0.7));
+
+            group.append('text')
+                .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+                .attr('dy', '0.35em')
+                .attr('class', 'node-label')
+                .attr('transform', d => `rotate(${d.angle * 180 / Math.PI - 90}) translate(${outerRadius + 12}) ${d.angle > Math.PI ? 'rotate(180)' : ''}`)
+                .attr('text-anchor', d => d.angle > Math.PI ? 'end' : null)
+                .text(d => nodes[d.index]);
+
+            // Chords
+            svg.append('g')
+                .selectAll('path')
+                .data(chords)
+                .join('path')
+                .attr('class', 'chord-path')
+                .attr('d', ribbon)
+                .attr('fill', d => {
+                    const key = `${nodes[d.source.index]}-${nodes[d.target.index]}`;
+                    const conn = connections[key];
+                    if (conn) {
+                        const neg = conn.filter(c => c.impact === '(-)').length;
+                        const pos = conn.filter(c => c.impact === '(+)').length;
+                        if (neg >= pos) return impactColors['(-)'];
+                        return impactColors['(+)'];
+                    }
+                    return '#95a5a6';
+                })
+                .attr('stroke', d => d3.color(pbColors[nodes[d.source.index]]).darker(0.5))
+                .style('opacity', 0.7)
+                .on('mouseover', function(event, d) {
+                    d3.select(this).style('opacity', 1);
+                    const content = getTooltipContent(nodes[d.source.index], nodes[d.target.index]);
+                    if (content) showTooltip(event, content);
+                })
+                .on('mousemove', event => {
+                    tooltip.style.left = `${Math.min(event.clientX + 15, window.innerWidth - 450)}px`;
+                    tooltip.style.top = `${Math.min(event.clientY + 15, window.innerHeight - 300)}px`;
+                })
+                .on('mouseout', function() {
+                    d3.select(this).style('opacity', 0.7);
+                    hideTooltip();
+                });
+
+            createChordLegend('legend-chord');
+        }
+
+        // ============================================
+        // 2. HIERARCHICAL EDGE BUNDLING (Improved)
+        // ============================================
+        function createEdgeBundling() {
+            const width = 800, height = 800;
+            const radius = width / 2 - 120;
+
+            const svg = d3.select('#chart-edge-bundle')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width/2},${height/2})`);
+
+            // Arrow markers with unique IDs
+            const defs = svg.append('defs');
+
+            // Create gradient definitions for each impact type
+            ['negative', 'positive', 'mixed', 'unknown'].forEach(type => {
+                const color = type === 'negative' ? '#e74c3c' : type === 'positive' ? '#2ecc71' : type === 'mixed' ? '#f39c12' : '#95a5a6';
+                defs.append('marker')
+                    .attr('id', `arrow-${type}`)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 8)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 5)
+                    .attr('markerHeight', 5)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('d', 'M0,-4L10,0L0,4')
+                    .attr('fill', color);
+            });
+
+            // Node positions
+            const angleStep = (2 * Math.PI) / nodes.length;
+            const nodePositions = {};
+            nodes.forEach((n, i) => {
+                const angle = i * angleStep - Math.PI / 2;
+                nodePositions[n] = {
+                    x: Math.cos(angle) * radius,
+                    y: Math.sin(angle) * radius,
+                    angle: angle,
+                    index: i
+                };
+            });
+
+            // Tension control
+            let tension = 0.70;
+
+            // Create curved path with offset to avoid overlaps
+            function createPath(source, target, offset = 0) {
+                const s = nodePositions[source];
+                const t = nodePositions[target];
+
+                // Calculate base control point (center)
+                const cx = 0, cy = 0;
+
+                // Add perpendicular offset to control points to separate overlapping lines
+                const dx = t.x - s.x;
+                const dy = t.y - s.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                const perpX = -dy / len * offset;
+                const perpY = dx / len * offset;
+
+                const cp1x = s.x * (1 - tension) + cx * tension + perpX * 0.5;
+                const cp1y = s.y * (1 - tension) + cy * tension + perpY * 0.5;
+                const cp2x = t.x * (1 - tension) + cx * tension + perpX * 0.5;
+                const cp2y = t.y * (1 - tension) + cy * tension + perpY * 0.5;
+
+                return `M${s.x},${s.y} C${cp1x},${cp1y} ${cp2x},${cp2y} ${t.x},${t.y}`;
+            }
+
+            // Aggregate links and assign offsets to distinguish overlapping paths
+            const linkData = [];
+            const pairCounts = {}; // Track how many links between each pair of adjacent node pairs
+
+            Object.keys(connections).forEach((key, idx) => {
+                const [source, target] = key.split('-');
+                const conn = connections[key];
+                const impacts = conn.map(c => c.impact);
+                const neg = impacts.filter(i => i === '(-)').length;
+                const pos = impacts.filter(i => i === '(+)').length;
+                const mix = impacts.filter(i => i === '(-/+)').length;
+
+                let impactType = 'unknown';
+                if (neg >= pos && neg >= mix) impactType = 'negative';
+                else if (pos >= neg && pos >= mix) impactType = 'positive';
+                else if (mix > 0) impactType = 'mixed';
+
+                const maxRelevance = conn.reduce((max, c) => {
+                    const w = relevanceWidth[c.relevance] || 1;
+                    return w > max ? w : max;
+                }, 1);
+
+                // Calculate offset based on source-target combination to spread out overlapping lines
+                // Use a hash of source+target indices to create consistent offsets
+                const sIdx = nodePositions[source]?.index || 0;
+                const tIdx = nodePositions[target]?.index || 0;
+                const pairKey = Math.min(sIdx, tIdx) + '-' + Math.max(sIdx, tIdx);
+
+                if (!pairCounts[pairKey]) pairCounts[pairKey] = 0;
+                const offset = (pairCounts[pairKey] - 0.5) * 15; // Spread by 15px
+                pairCounts[pairKey]++;
+
+                linkData.push({
+                    source, target, impactType,
+                    weight: maxRelevance,
+                    count: conn.length,
+                    offset: offset,
+                    index: idx,
+                    allImpacts: impacts // Store all individual impact values for filtering
+                });
+            });
+
+            // Draw links
+            const linksGroup = svg.append('g');
+
+            function updateLinks() {
+                linksGroup.selectAll('.edge-bundle-link').remove();
+
+                linksGroup.selectAll('.edge-bundle-link')
+                    .data(linkData)
+                    .join('path')
+                    .attr('class', 'edge-bundle-link')
+                    .attr('d', d => createPath(d.source, d.target, d.offset))
+                    .attr('stroke', d => impactColors[d.impactType === 'negative' ? '(-)' : d.impactType === 'positive' ? '(+)' : d.impactType === 'mixed' ? '(-/+)' : '?'])
+                    .attr('stroke-width', d => d.weight)
+                    .attr('stroke-opacity', 0.4)
+                    .attr('stroke-linecap', 'round')
+                    .attr('marker-end', d => `url(#arrow-${d.impactType})`)
+                    .on('mouseover', function(event, d) {
+                        // Highlight this path
+                        d3.select(this)
+                            .attr('stroke-opacity', 1)
+                            .attr('stroke-width', d.weight + 2)
+                            .classed('highlighted', true);
+
+                        // Fade all others significantly
+                        linksGroup.selectAll('.edge-bundle-link')
+                            .filter(l => l !== d)
+                            .attr('stroke-opacity', 0.05);
+
+                        const content = getTooltipContent(d.source, d.target);
+                        if (content) showTooltip(event, content);
+                    })
+                    .on('mousemove', event => {
+                        tooltip.style.left = `${Math.min(event.clientX + 15, window.innerWidth - 450)}px`;
+                        tooltip.style.top = `${Math.min(event.clientY + 15, window.innerHeight - 300)}px`;
+                    })
+                    .on('mouseout', function(event, d) {
+                        linksGroup.selectAll('.edge-bundle-link')
+                            .attr('stroke-opacity', 0.4)
+                            .attr('stroke-width', l => l.weight)
+                            .classed('highlighted', false);
+                        hideTooltip();
+                    });
+            }
+
+            updateLinks();
+
+            // Draw nodes with symbols
+            const nodesGroup = svg.append('g');
+            const symbolSize = 32;
+
+            nodes.forEach(n => {
+                const pos = nodePositions[n];
+                const g = nodesGroup.append('g').attr('transform', `translate(${pos.x},${pos.y})`);
+
+                // Add the SVG symbol as an image
+                g.append('image')
+                    .attr('href', `symbols/${pbSymbols[n]}.svg`)
+                    .attr('width', symbolSize)
+                    .attr('height', symbolSize)
+                    .attr('x', -symbolSize / 2)
+                    .attr('y', -symbolSize / 2)
+                    .style('cursor', 'pointer')
+                    .on('mouseover', function() {
+                        // Highlight only edges connected to this node
+                        linksGroup.selectAll('.edge-bundle-link')
+                            .attr('stroke-opacity', d => d.source === n || d.target === n ? 0.9 : 0.03)
+                            .attr('stroke-width', d => d.source === n || d.target === n ? d.weight + 1 : d.weight);
+                        // Scale up the symbol
+                        d3.select(this).transition().duration(150).attr('width', symbolSize * 1.2).attr('height', symbolSize * 1.2)
+                            .attr('x', -symbolSize * 0.6).attr('y', -symbolSize * 0.6);
+                    })
+                    .on('mouseout', function() {
+                        linksGroup.selectAll('.edge-bundle-link')
+                            .attr('stroke-opacity', 0.4)
+                            .attr('stroke-width', d => d.weight);
+                        // Reset symbol size
+                        d3.select(this).transition().duration(150).attr('width', symbolSize).attr('height', symbolSize)
+                            .attr('x', -symbolSize / 2).attr('y', -symbolSize / 2);
+                    });
+
+                const labelRadius = radius + 25;
+                const lx = Math.cos(pos.angle) * labelRadius;
+                const ly = Math.sin(pos.angle) * labelRadius;
+                const textAnchor = pos.angle > Math.PI/2 || pos.angle < -Math.PI/2 ? 'end' : 'start';
+
+                g.append('text')
+                    .attr('x', lx - pos.x)
+                    .attr('y', ly - pos.y)
+                    .attr('text-anchor', textAnchor)
+                    .attr('dominant-baseline', 'middle')
+                    .attr('fill', '#fff')
+                    .attr('font-size', '12px')
+                    .attr('font-weight', 'bold')
+                    .text(n);
+            });
+
+            // Tension slider
+            document.getElementById('tension-slider').addEventListener('input', function() {
+                tension = this.value / 100;
+                updateLinks();
+            });
+
+            createEdgeBundleLegend('legend-edge-bundle');
+        }
+
+        // ============================================
+        // 3. ADJACENCY MATRIX
+        // ============================================
+        function createMatrix() {
+            const size = 60;
+            const margin = { top: 100, right: 50, bottom: 50, left: 100 };
+            const width = nodes.length * size + margin.left + margin.right;
+            const height = nodes.length * size + margin.top + margin.bottom;
+
+            const svg = d3.select('#chart-matrix')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height);
+
+            const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // Create matrix data
+            const matrixData = [];
+            nodes.forEach((source, i) => {
+                nodes.forEach((target, j) => {
+                    const key = `${source}-${target}`;
+                    const conn = connections[key] || [];
+                    let impactType = '?';
+                    let maxWeight = 0;
+                    let mainImpact = 'unknown';
+                    let relevanceLevel = 'low';
+
+                    if (conn.length > 0) {
+                        const neg = conn.filter(c => c.impact === '(-)').length;
+                        const pos = conn.filter(c => c.impact === '(+)').length;
+                        impactType = neg >= pos ? '(-)' : '(+)';
+                        if (conn.some(c => c.impact === '(-/+)')) impactType = '(-/+)';
+                        maxWeight = Math.max(...conn.map(c => relevanceWidth[c.relevance] || 1));
+
+                        // Map impact type to internal name
+                        mainImpact = impactType === '(-)' ? 'negative' : impactType === '(+)' ? 'positive' : impactType === '(-/+)' ? 'mixed' : 'unknown';
+
+                        // Determine relevance level
+                        if (maxWeight >= 3) relevanceLevel = 'high';
+                        else if (maxWeight >= 2) relevanceLevel = 'medium';
+                        else relevanceLevel = 'low';
+                    }
+
+                    matrixData.push({
+                        source, target,
+                        row: i, col: j,
+                        count: conn.length,
+                        impactType, weight: maxWeight,
+                        mainImpact, relevanceLevel,
+                        allImpacts: conn.map(c => c.impact) // Store all individual impact values for filtering
+                    });
+                });
+            });
+
+            // Draw cells
+            g.selectAll('.matrix-cell')
+                .data(matrixData)
+                .join('rect')
+                .attr('class', 'matrix-cell')
+                .attr('x', d => d.col * size)
+                .attr('y', d => d.row * size)
+                .attr('width', size - 2)
+                .attr('height', size - 2)
+                .attr('fill', d => d.count > 0 ? impactColors[d.impactType] : 'rgba(255,255,255,0.03)')
+                .attr('opacity', d => d.count > 0 ? 0.3 + d.weight * 0.15 : 1)
+                .attr('rx', 4)
+                .on('mouseover', function(event, d) {
+                    if (d.count > 0) {
+                        d3.select(this).attr('stroke', '#fff').attr('stroke-width', 2);
+                        const content = getTooltipContent(d.source, d.target);
+                        if (content) showTooltip(event, content);
+                    }
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke', 'none');
+                    hideTooltip();
+                });
+
+            // Cell labels (count)
+            g.selectAll('.matrix-count')
+                .data(matrixData.filter(d => d.count > 0))
+                .join('text')
+                .attr('x', d => d.col * size + size / 2)
+                .attr('y', d => d.row * size + size / 2)
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .attr('fill', '#fff')
+                .attr('font-size', '12px')
+                .attr('font-weight', 'bold')
+                .attr('pointer-events', 'none')
+                .text(d => d.count);
+
+            // Row labels (sources)
+            g.selectAll('.row-label')
+                .data(nodes)
+                .join('text')
+                .attr('class', 'matrix-label row-label')
+                .attr('x', -10)
+                .attr('y', (d, i) => i * size + size / 2)
+                .attr('text-anchor', 'end')
+                .attr('dominant-baseline', 'middle')
+                .attr('fill', d => pbColors[d])
+                .attr('font-weight', 'bold')
+                .text(d => d);
+
+            // Column labels (targets)
+            g.selectAll('.col-label')
+                .data(nodes)
+                .join('text')
+                .attr('class', 'matrix-label col-label')
+                .attr('x', (d, i) => i * size + size / 2)
+                .attr('y', -10)
+                .attr('text-anchor', 'start')
+                .attr('dominant-baseline', 'middle')
+                .attr('fill', d => pbColors[d])
+                .attr('font-weight', 'bold')
+                .attr('transform', (d, i) => `rotate(-45, ${i * size + size / 2}, -10)`)
+                .text(d => d);
+
+            // Axis labels
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('x', margin.left + nodes.length * size / 2)
+                .attr('y', 20)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .text('Affected Boundary →');
+
+            svg.append('text')
+                .attr('class', 'axis-label')
+                .attr('x', 20)
+                .attr('y', margin.top + nodes.length * size / 2)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '12px')
+                .attr('transform', `rotate(-90, 20, ${margin.top + nodes.length * size / 2})`)
+                .text('Driver Boundary →');
+
+            // Custom legend for matrix
+            const matrixLegend = document.getElementById('legend-matrix');
+            matrixLegend.innerHTML = `
+                <div class="legend-section">
+                    <h3>Impact Direction</h3>
+                    ${createImpactLegendItems('matrix')}
+                </div>
+                <div class="legend-section">
+                    <h3>Relevance (Opacity)</h3>
+                    <div class="legend-item interactive" data-type="relevance" data-value="high" data-viz="matrix">
+                        <div style="width:30px;height:20px;background:#e74c3c;opacity:0.9;border-radius:3px;"></div><span>High</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="relevance" data-value="medium" data-viz="matrix">
+                        <div style="width:30px;height:20px;background:#e74c3c;opacity:0.55;border-radius:3px;"></div><span>Medium</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="relevance" data-value="low" data-viz="matrix">
+                        <div style="width:30px;height:20px;background:#e74c3c;opacity:0.35;border-radius:3px;"></div><span>Low</span>
+                    </div>
+                </div>
+                <div class="legend-section">
+                    <h3>Cell Numbers</h3>
+                    <div class="legend-item" style="flex-direction:column;align-items:flex-start;gap:4px;">
+                        <span>Number in each cell = count of documented interactions</span>
+                    </div>
+                </div>
+                <div class="legend-section">
+                    <h3>Planetary Boundaries</h3>
+                    ${createPBLegendItems('matrix')}
+                </div>
+            `;
+        }
+
+        // Initialize all visualizations
+        createChordDiagram();
+        createEdgeBundling();
+        createMatrix();
+
+        // ============================================
+        // INTERACTIVE LEGEND HIGHLIGHTING
+        // ============================================
+
+        // Map impact types to internal representations
+        const impactTypeMap = {
+            '(-)': 'negative',
+            '(+)': 'positive',
+            '(-/+)': 'mixed',
+            '?': 'unknown'
+        };
+
+        // Setup legend interactivity
+        document.querySelectorAll('.legend-item.interactive').forEach(item => {
+            item.addEventListener('mouseenter', function() {
+                const type = this.dataset.type;
+                const value = this.dataset.value;
+                const viz = this.dataset.viz;
+
+                highlightByLegend(viz, type, value);
+            });
+
+            item.addEventListener('mouseleave', function() {
+                const viz = this.dataset.viz;
+                resetHighlight(viz);
+            });
+        });
+
+        // Highlight functions for each visualization
+        function highlightByLegend(viz, type, value) {
+            if (viz === 'chord') {
+                highlightChord(type, value);
+            } else if (viz === 'edge-bundle') {
+                highlightEdgeBundle(type, value);
+            } else if (viz === 'matrix') {
+                highlightMatrix(type, value);
+            }
+        }
+
+        function resetHighlight(viz) {
+            if (viz === 'chord') {
+                resetChordHighlight();
+            } else if (viz === 'edge-bundle') {
+                resetEdgeBundleHighlight();
+            } else if (viz === 'matrix') {
+                resetMatrixHighlight();
+            }
+        }
+
+        // Chord diagram highlighting
+        function highlightChord(type, value) {
+            const ribbons = d3.select('#chart-chord').selectAll('.chord-path');
+            const arcs = d3.select('#chart-chord').selectAll('.chord-arc');
+
+            if (type === 'pb') {
+                // Highlight arcs and ribbons for this PB
+                const idx = nodeIndex[value];
+                arcs.style('opacity', d => d.index === idx ? 1 : 0.15);
+                ribbons.style('opacity', d => d.source.index === idx || d.target.index === idx ? 0.85 : 0.05);
+            } else if (type === 'impact') {
+                // Highlight ribbons by impact type and change their color to match
+                ribbons
+                    .style('opacity', d => {
+                        const sourceNode = nodes[d.source.index];
+                        const targetNode = nodes[d.target.index];
+                        const conn = connections[`${sourceNode}-${targetNode}`] || [];
+                        const hasImpact = conn.some(c => c.impact === value);
+                        return hasImpact ? 0.85 : 0.05;
+                    })
+                    .attr('fill', d => {
+                        const sourceNode = nodes[d.source.index];
+                        const targetNode = nodes[d.target.index];
+                        const conn = connections[`${sourceNode}-${targetNode}`] || [];
+                        const hasImpact = conn.some(c => c.impact === value);
+                        // If this ribbon has the selected impact, color it with that impact's color
+                        return hasImpact ? impactColors[value] : '#95a5a6';
+                    });
+                arcs.style('opacity', 0.4);
+            }
+        }
+
+        function resetChordHighlight() {
+            const ribbons = d3.select('#chart-chord').selectAll('.chord-path');
+            // Reset opacity
+            ribbons.style('opacity', 0.7);
+            // Reset fill color to original (based on dominant impact)
+            ribbons.attr('fill', d => {
+                const key = `${nodes[d.source.index]}-${nodes[d.target.index]}`;
+                const conn = connections[key];
+                if (conn) {
+                    const neg = conn.filter(c => c.impact === '(-)').length;
+                    const pos = conn.filter(c => c.impact === '(+)').length;
+                    if (neg >= pos) return impactColors['(-)'];
+                    return impactColors['(+)'];
+                }
+                return '#95a5a6';
+            });
+            d3.select('#chart-chord').selectAll('.chord-arc').style('opacity', 1);
+        }
+
+        // Edge bundle highlighting
+        function highlightEdgeBundle(type, value) {
+            const links = d3.select('#chart-edge-bundle').selectAll('.edge-bundle-link');
+            const symbols = d3.select('#chart-edge-bundle').selectAll('image');
+
+            if (type === 'pb') {
+                links.attr('stroke-opacity', d => d.source === value || d.target === value ? 0.9 : 0.03);
+                symbols.attr('opacity', function() {
+                    // Get the node name from position
+                    const href = d3.select(this).attr('href');
+                    const symbolName = href.split('/').pop().replace('.svg', '');
+                    const nodeKey = Object.keys(pbSymbols).find(k => pbSymbols[k] === symbolName);
+                    return nodeKey === value ? 1 : 0.3;
+                });
+            } else if (type === 'impact') {
+                // Filter by checking if ANY connection has this impact type
+                links.attr('stroke-opacity', d => d.allImpacts.includes(value) ? 0.9 : 0.03);
+                symbols.attr('opacity', 0.5);
+            } else if (type === 'relevance') {
+                links.attr('stroke-opacity', d => {
+                    if (value === 'high') return d.weight >= 3 ? 0.9 : 0.03;
+                    if (value === 'medium') return d.weight >= 2 && d.weight < 3 ? 0.9 : 0.03;
+                    if (value === 'low') return d.weight < 2 ? 0.9 : 0.03;
+                    return 0.03;
+                });
+                symbols.attr('opacity', 0.5);
+            }
+        }
+
+        function resetEdgeBundleHighlight() {
+            d3.select('#chart-edge-bundle').selectAll('.edge-bundle-link').attr('stroke-opacity', 0.4);
+            d3.select('#chart-edge-bundle').selectAll('image').attr('opacity', 1);
+        }
+
+        // Matrix highlighting
+        function highlightMatrix(type, value) {
+            const cells = d3.select('#chart-matrix').selectAll('.matrix-cell');
+            const rowLabels = d3.select('#chart-matrix').selectAll('.row-label');
+            const colLabels = d3.select('#chart-matrix').selectAll('.col-label');
+
+            if (type === 'pb') {
+                const idx = nodeIndex[value];
+                cells.attr('opacity', d => d.row === idx || d.col === idx ? 1 : 0.15);
+                rowLabels.attr('opacity', (d, i) => i === idx ? 1 : 0.3);
+                colLabels.attr('opacity', (d, i) => i === idx ? 1 : 0.3);
+            } else if (type === 'impact') {
+                // Filter by checking if ANY connection has this impact type
+                cells.attr('opacity', d => d.allImpacts.includes(value) ? 1 : 0.15);
+                rowLabels.attr('opacity', 0.5);
+                colLabels.attr('opacity', 0.5);
+            } else if (type === 'relevance') {
+                cells.attr('opacity', d => {
+                    if (value === 'high') return d.relevanceLevel === 'high' ? 1 : 0.15;
+                    if (value === 'medium') return d.relevanceLevel === 'medium' ? 1 : 0.15;
+                    if (value === 'low') return d.relevanceLevel === 'low' ? 1 : 0.15;
+                    return 0.15;
+                });
+                rowLabels.attr('opacity', 0.5);
+                colLabels.attr('opacity', 0.5);
+            }
+        }
+
+        function resetMatrixHighlight() {
+            d3.select('#chart-matrix').selectAll('.matrix-cell').attr('opacity', 1);
+            d3.select('#chart-matrix').selectAll('.row-label').attr('opacity', 1);
+            d3.select('#chart-matrix').selectAll('.col-label').attr('opacity', 1);
+        }
+
+        // ============================================
+        // THEME TOGGLE
+        // ============================================
+        const themeToggle = document.getElementById('themeToggle');
+        const sunIcon = themeToggle.querySelector('.sun-icon');
+        const moonIcon = themeToggle.querySelector('.moon-icon');
+        const themeLabel = themeToggle.querySelector('.theme-label');
+
+        // Check for saved theme preference or default to dark
+        const savedTheme = localStorage.getItem('pb-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('pb-theme', newTheme);
+            updateThemeButton(newTheme);
+        });
+
+        function updateThemeButton(theme) {
+            if (theme === 'dark') {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+                themeLabel.textContent = 'Light mode';
+            } else {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+                themeLabel.textContent = 'Dark mode';
+            }
+        }
+    </script>
+</body>
+</html>

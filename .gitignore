@@ -1,0 +1,17 @@
+# Virtual environment
+.venv/
+
+# macOS
+.DS_Store
+*.webloc
+
+# Claude Code
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# IDE
+.idea/
+.vscode/

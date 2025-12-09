@@ -1,0 +1,562 @@
+[
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"BI",
+    "process":"Increased degradation of coral reefs can lead to collapse of marine food webs.",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Hoegh-Guldberg et al. 2017; Doney et al. 2009"
+  },
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"BI",
+    "process":"increased OA can lead to a reduction in calicifying species and to the loss of habitat forming species",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Doney et al. 2009; Teixid\u00f3 et al. 2024"
+  },
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"BI",
+    "process":"Increased pCO2 can lead to increased photosynthesis rates",
+    "impact":"(+)",
+    "relevance":"low",
+    "literature":"Das and Mangwani 2015"
+  },
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"AL",
+    "process":"Decreasing pH can increases the potential for high dimethyl sulfides emissions by phytoplankton",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Das and Mangwani 2015, Deng et al. 2021, Fung et al. 2022"
+  },
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"BI\/BC",
+    "process":"OA can lead to changes in nitrification and nitrogen fixation",
+    "impact":"(-\/+)",
+    "relevance":"low",
+    "literature":"Shi et al. 2012, Wannicke et al. 2018"
+  },
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"CC",
+    "process":"OA can decrease the capacity of organisms to form carbonate shells, which allows oceans to absorb more CO2",
+    "impact":"(+)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Ocean Acidification (OA)",
+    "target":"NE",
+    "process":"Ocean acidification can alter the chemical behavior of pollutants, such as heavy metals",
+    "impact":"?",
+    "relevance":"low",
+    "literature":"Jin et al. 2021"
+  },
+  {
+    "source":"Freshwater Change (FW)",
+    "target":"BI",
+    "process":"Changes in streamflow (e.g. by dams) can causes habitat destruction",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Gleeson et al. 2020, Broadley et al. 2022"
+  },
+  {
+    "source":"Freshwater Change (FW)",
+    "target":"BI",
+    "process":"Changes in streamflow and soil moisture alter transport and availability of nutrients",
+    "impact":"(-\/+)",
+    "relevance":"low",
+    "literature":"Gleeson et al. 2020, Lie et al. 2024"
+  },
+  {
+    "source":"Freshwater Change (FW)",
+    "target":"BI",
+    "process":"reduction in river flow\/drain aquifers can lead to salinization and decrease productivity",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Lade et al. SM, Broadley et al. 2022"
+  },
+  {
+    "source":"Freshwater Change (FW)",
+    "target":"CC",
+    "process":"Soil moisture, surface water and frozen water can alter earth surface albedo",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Maina et al. 2022,"
+  },
+  {
+    "source":"Freshwater Change (FW)",
+    "target":"BC",
+    "process":"Changes in streamflow and soil moisture alter transport of nutrients",
+    "impact":"(-\/+)",
+    "relevance":"low",
+    "literature":"Gleeson et al. 2020, Lie et al. 2024"
+  },
+  {
+    "source":"Freshwater Change (FW)",
+    "target":"LSC",
+    "process":"Reduction of soil moisture\/green water flow can lead to desertification\/land degradation",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"AbdelRahman 2023"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"CC",
+    "process":"Loss of biodiversity and ecosystem degradation can reduce the capacity for carbon uptake",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Bustamante et al. 2015, Lade et al. 2020, Poorter et al. 2015, Cardinale et al. 2012"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"CC",
+    "process":"Increased productivity due to increased eutrophication can lead to increased GHG (Methane) emissions",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Beaulieu et al. 2019, Lade et al,. 2020, Rocher-Ros et al. 2023"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"CC",
+    "process":"Reduced biodiversity leads to a reduction of CO2 uptake in oceans",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Gruber et al. 2023, Lade et al. 2020, Nash et al. 2017"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"BC",
+    "process":"Biodiversity loss can alter nutrient cycles and lead to nutrients being added to ecosystems",
+    "impact":"(-\/+)",
+    "relevance":"low",
+    "literature":"Cui et al. 2022"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"LSC",
+    "process":"Degraded biosphere integrity can increase the vulnerability of forests to shocks or pests",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Bustamante et al. 2015, Poorter et al. 2015"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"FW",
+    "process":"Loss of ecosystem functions reduce the capability to regulate the hydrological cycle that can lead to changes in water availability and quality",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Harrison et al. 2014"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"OA",
+    "process":"Decline in coral reefs and phytoplankton can excaerbate ocean acidifcation",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Cornwall et al. 2021, Zhang et al. 2023"
+  },
+  {
+    "source":"Biosphere Integrity (BI)",
+    "target":"NE",
+    "process":"The capacity of ecosystems to degrade and assimilate pollutants is reduced leading to higher concentrations of harmful substances",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Ferreira et al 2023"
+  },
+  {
+    "source":"Stratospheric Ozone depletion (SO)",
+    "target":"CC",
+    "process":"Reduced absorbtion of UV in the stratosphere increases the UV radiation at Earth's surface",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Stratospheric Ozone depletion (SO)",
+    "target":"BI",
+    "process":"Reduced absorbtion of UV in the stratosphere increases UV radiation at Earth's surface with the potential to damage DNA and impair photosynthesis",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Lade et al, EEPA 2019"
+  },
+  {
+    "source":"Stratospheric Ozone depletion (SO)",
+    "target":"AL",
+    "process":"Changes in UV radiation can influence the production of aerosols through chemical reactions in the atmosphere.",
+    "impact":"(-\/+)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"BI",
+    "process":"Nutrient runoff can degrade soil by increased acidification, eutrophication and simplification of ecosystems",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"BI",
+    "process":"Nutrient runoff from agricultural application into freshwater can lead to algal blooms, dead zones, loss of fish",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"BI",
+    "process":"Nutrient runoff into the ocean can lead to large scale ocean hypocix events, having strong impacts on the ocean ecosystems",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019, Rockstr\u00f6m et al. 2009"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"LSC",
+    "process":"Excessive use of fertilizers can lead to soil degradation (farmland)",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"FW",
+    "process":"Nutrient runoff from agriculture, sewage and indutrial processes can degrade freshwater quality",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"du Plessis 2022"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"AL",
+    "process":"Nitrogen compounds, particularly ammonia (NH3) from agriculture, can contribute to the formation of fine particulate matter (PM2.5) in the atmosphere.",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Lade et al. 2019, Gu et al. 2021"
+  },
+  {
+    "source":"Biogeochemical Flows (BC)",
+    "target":"SO",
+    "process":"Application of N fertilizers can lead to N2O emissions that depleets ozone in the stratosphere",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019, Campbel et al. 2017"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"CC",
+    "process":"Deforestation and land conversion can reduce the capacity of these systems to absorb CO2, contributing to higher atmospheric CO2",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"CC",
+    "process":"Changes in land cover can alter the surface albedo. This affects the radiatvie forcing",
+    "impact":"(+)",
+    "relevance":"high",
+    "literature":"Gibbard et al. 2005, Andrews et al. 2016"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"BI",
+    "process":"Land conversion can lead to habitat loss. Fragmentation of habitats can isolate populations, reducing genetic diversity",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Lade et al. 2020, Lade et al. 2019, Campbell et al. 2017, Alkemade et al. 2009"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"BI",
+    "process":"Forest cover loss can lead to decreased water quality, altered flows etc. reducing species diversity",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Semenchuk et al. 2022"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"BI",
+    "process":"Land system change can disrupt ecosystem services such as pollination, water purification, soil stabilization",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Bennet et al. 2020,du Plessis 2022, Delelegn et al. 2017, Borelli et al. 2020"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"FW",
+    "process":"Land system change can increase river discharge",
+    "impact":"(+)",
+    "relevance":"low\/medium",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"FW",
+    "process":"Deforestation can impact the hydrological cycle by reducing evapotranspiration and subsequent drying of the atmosphere",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Xu et al. 2022"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"AL",
+    "process":"Forest fires (associated with land clearing), as well as cleared agricultural land emit large amounts of areosol",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Land system change (LSC)",
+    "target":"FW",
+    "process":"Deforestation (caused by drought which is likely due to climate change) can lead to eutrophication of drinking water reservoirs",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Kong et al. 2022 https:\/\/doi.org\/10.1016\/j.watres.2022.118721"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"CC",
+    "process":"Sulfate aerosols reflect sunlight, cooling the Earth's surface; Black carbon absorbs sunlight, warming the atmosphere",
+    "impact":"(-\/+)",
+    "relevance":"medium",
+    "literature":"IPCC AR5, Chapter 7 Clouds and Aerosols, Quaas et al. 2022"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"CC",
+    "process":"Aerosols act as cloud condensation nuclei, influencing cloud formation, properties and lifetimes. This can affect the energy balance as well as the hydrological cycle and climate dynamics",
+    "impact":"(-\/+)",
+    "relevance":"medium",
+    "literature":"IPCC AR5, Chapter 7 Clouds and Aerosols"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"BC",
+    "process":"changes of bioaerosols in the atmosphere can lead to changes in nutrient deposition",
+    "impact":"?",
+    "relevance":"low",
+    "literature":"Kanakindou et al. 2018, Fr\u00f6hlich-Nowoisky et al. 2016"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"BC",
+    "process":"Acidic rains can lead to soil acidification",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Grennfelt et al. 2020"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"OA",
+    "process":"Some aerosols (e.g. thos containing sulfur compounds) can increase acidic rain. When entering the ocean, this can increase its acidification",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Doney et al. 2009"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"BI",
+    "process":"Aerosol deposition can deliver nutrients like iron, stimulating net primary production",
+    "impact":"(+)",
+    "relevance":"?",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"SO",
+    "process":"Aeorosols in the stratosphere can provide surfaces for heterogenous chemical reactions that can contribute to ozone depletion",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Solomon et al. 1987"
+  },
+  {
+    "source":"Aerosol Loading (AL)",
+    "target":"SO",
+    "process":"Areosols can absorb UV radiation therefore increasing the safe level of ozone depleation",
+    "impact":"(+)",
+    "relevance":"low",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BI",
+    "process":"Increase release of pesticides, industrial chemicals and heavy metals can intoxicate a wide range of organisms; leading diversity loss and disruption of ecosystem services",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Sigmund et al. 2023"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BI",
+    "process":"The release of genetically modified organisms can lead to genetic pollution, affecting genetic diversity",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Tsatsakis et al. 2017 https:\/\/doi.org\/10.1016\/j.fct.2017.06.033"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BI",
+    "process":"The interaction of released GMOs with environmental conditions may increase their fitness, competitive abilites, gene flow and effects on other biota",
+    "impact":"(-\/+)",
+    "relevance":"low",
+    "literature":"Bauer-Panskus et al. 2020 DOI 10.1186\/s12302-020-00301-0"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"FW",
+    "process":"Increased release of pharmaceuticals, personal care products and industrial chemicals can contaminate freshwater systems",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Richmond et al. 2017"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"OA",
+    "process":"Abiotic plastic degradation can induce a decrease in seawater pH",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Romera-Castilla et al. 2023"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BC",
+    "process":"The use of synthetic fertilizer impacts nitrogen and phospherous nutrient cycles ",
+    "impact":"(+)",
+    "relevance":"high",
+    "literature":"Peter S\u00f8gaard J\u00f8rgensen et al. 2022, https:\/\/doi.org\/10.1016\/j.oneear.2022.09.011"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"AL",
+    "process":"The release of volatile organic compounds and persistent organic pollutants can contribute to the formation of secondary aerosols",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Nault et al. 2021"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"CC",
+    "process":"The use of genetically modified crops could decrease greenhouse gas emissions",
+    "impact":"(+)",
+    "relevance":"low",
+    "literature":"Kovak et al. 2022 https:\/\/doi.org\/10.1016\/j.tplants.2022.01.004"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BI",
+    "process":"Bt crops may negatively affect aquatic biota",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Pott et al. 2018 https:\/\/doi.org\/10.1016\/j.scitotenv.2018.04.013"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BI",
+    "process":"The use of Bt crops can select for resistant insect pests",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Noack et al. 2023 doi:10.1126\/science.ado9340"
+  },
+  {
+    "source":"Novel Entities (NE)",
+    "target":"BI (and NE itself)",
+    "process":"The use of Bt crops can reduce use of insecticides",
+    "impact":"(+)",
+    "relevance":"medium",
+    "literature":"Noack et al. 2023 doi:10.1126\/science.ado9340"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"BI",
+    "process":"Rising temperatures and shifting precipitation patterns lead to changing weather regimes that can affect biological events such as habitat loss, species extinction, migration and the introduction of invasive species",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Lade et al. 2020, Jaureguiberry et al. 2022"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"BI",
+    "process":"Extreme events and rising sea levels can lead to the salinisation of freshwater ecosystems",
+    "impact":"(-)",
+    "relevance":"medium",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"BC",
+    "process":"Increases in extreme precipitation events can lead to an increase of agricultural runoff",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Skidmore et al. 2023"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"LSC",
+    "process":"Climate stress on forests (e.g. increased frequency of wildfires and droughts) can lead to deforestation and land degradation",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Flore et al. 2024"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"FW",
+    "process":"Changes in precipitation patterns and the melting of glaciers can impact freshwater availability.",
+    "impact":"(-\/+)",
+    "relevance":"medium",
+    "literature":"Konapala et al. 2020, Haeberli et al. 2020"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"FW",
+    "process":"Precipitation patterns can change due to climate change",
+    "impact":"(-\/+)",
+    "relevance":"high",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"OA",
+    "process":"Increasing CO2 levels lead to an increased absorption of CO2 in the oceans, exacerbating ocean acidificcation",
+    "impact":"(-)",
+    "relevance":"high",
+    "literature":"Doney et al. 2009"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"OA",
+    "process":"Increasing temperatures can reduce the solubility of CO2 in water",
+    "impact":"(+)",
+    "relevance":"low",
+    "literature":"Lade et al. 2020"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"AL",
+    "process":"Increased droughts and changing atmospheric circulations can increase dust formation and distribution",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Zhao et al. 2019"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"SO",
+    "process":"Climate change reduces stratospheric temperatures due to heat beeing trapped at lower levels of the atmosphere, slowing ozone depleating chemical reactions and increasing the destruction of nitrous oxides",
+    "impact":"(+)",
+    "relevance":"low",
+    "literature":"Lade et al. 2019"
+  },
+  {
+    "source":"Climate Change (CC)",
+    "target":"NE",
+    "process":"Increasing temperatures can enhance the volatility of chemical pollutatnts, altering their atmospheric concentration",
+    "impact":"(-)",
+    "relevance":"low",
+    "literature":"Balbus et al. 2013, Bolan et al. 2023"
+  }
+]
