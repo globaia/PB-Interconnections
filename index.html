@@ -522,6 +522,7 @@
             <button class="nav-tab active" data-viz="chord">Chord Diagram</button>
             <button class="nav-tab" data-viz="edge-bundle">Hierarchical Edge Bundling</button>
             <button class="nav-tab" data-viz="matrix">Adjacency Matrix</button>
+            <button class="nav-tab" data-viz="phc">PHC Report Figure</button>
         </div>
 
         <!-- Chord Diagram -->
@@ -571,6 +572,22 @@
             <div class="chart-wrapper">
                 <div id="chart-matrix"></div>
                 <div class="legend" id="legend-matrix"></div>
+            </div>
+            <div class="viz-caption">
+                <p><strong>The Causal Network of Planetary Boundary Processes:</strong> The diagram shows the most significant and best understood interconnections between Planetary Boundary (PB) processes and the most important drivers of transgression. Colored arrows indicate a connection between two PB processes, with the color denoting the source PB process. The width of the arrow represents the estimated relative strength of the connection, while the line style (solid, dashed, dotted) indicates the nature of the connection (positive, negative, or both). Numbers associated with PB processes denote the most important drivers of PB transgression, as defined above. These drivers can be linked to multiple boundaries simultaneously.</p>
+                <p><strong>Key takeaway:</strong> The interconnections between PBs are multidirectional and vary in strength. Addressing one issue often implies the need to address several others at the same time. For example, the health of the biosphere cannot be ensured without managing all other PB processes. When this is done correctly, what initially seems like a challenging task can lead to significant benefits across different processes.</p>
+            </div>
+        </div>
+
+        <!-- PHC Report Figure -->
+        <div class="visualization-container" id="viz-phc">
+            <div class="viz-header">
+                <h2 class="viz-title">PHC Report Figure</h2>
+                <p class="viz-description">Circular arrow diagram as featured in the Planetary Health Check 2024 report. Arrow color = source boundary, width = relevance, line style = impact direction.</p>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart-phc"></div>
+                <div class="legend" id="legend-phc"></div>
             </div>
             <div class="viz-caption">
                 <p><strong>The Causal Network of Planetary Boundary Processes:</strong> The diagram shows the most significant and best understood interconnections between Planetary Boundary (PB) processes and the most important drivers of transgression. Colored arrows indicate a connection between two PB processes, with the color denoting the source PB process. The width of the arrow represents the estimated relative strength of the connection, while the line style (solid, dashed, dotted) indicates the nature of the connection (positive, negative, or both). Numbers associated with PB processes denote the most important drivers of PB transgression, as defined above. These drivers can be linked to multiple boundaries simultaneously.</p>
@@ -1565,10 +1582,290 @@
             `;
         }
 
+        // ============================================
+        // 4. PHC REPORT FIGURE (Circular Arrow Diagram)
+        // ============================================
+        function createPHCFigure() {
+            const width = 800, height = 800;
+            const outerRadius = width / 2 - 80;
+            const innerRadius = outerRadius - 30;
+            const arrowRadius = innerRadius - 5;
+
+            const svg = d3.select('#chart-phc')
+                .append('svg')
+                .attr('width', width)
+                .attr('height', height)
+                .append('g')
+                .attr('transform', `translate(${width/2},${height/2})`);
+
+            // PHC uses a specific order for the PBs
+            const phcOrder = ['CC', 'NE', 'SO', 'AL', 'OA', 'BC', 'FW', 'LSC', 'BI'];
+
+            // Calculate angle for each PB
+            const angleScale = d3.scaleLinear()
+                .domain([0, phcOrder.length])
+                .range([0, 2 * Math.PI]);
+
+            const pbAngles = {};
+            phcOrder.forEach((pb, i) => {
+                pbAngles[pb] = angleScale(i);
+            });
+
+            // Draw outer arc segments for each PB
+            const arcGenerator = d3.arc()
+                .innerRadius(innerRadius)
+                .outerRadius(outerRadius);
+
+            const segmentAngle = (2 * Math.PI) / phcOrder.length;
+            const padAngle = 0.02;
+
+            svg.selectAll('.phc-arc')
+                .data(phcOrder)
+                .join('path')
+                .attr('class', 'phc-arc')
+                .attr('d', (d, i) => arcGenerator({
+                    startAngle: angleScale(i) - segmentAngle/2 + padAngle,
+                    endAngle: angleScale(i) + segmentAngle/2 - padAngle
+                }))
+                .attr('fill', d => pbColors[d])
+                .attr('stroke', d => d3.color(pbColors[d]).darker())
+                .attr('stroke-width', 1)
+                .on('mouseover', function(event, d) {
+                    svg.selectAll('.phc-arrow')
+                        .attr('opacity', arrow => arrow.source === d || arrow.target === d ? 1 : 0.1);
+                })
+                .on('mouseout', function() {
+                    svg.selectAll('.phc-arrow').attr('opacity', 0.8);
+                });
+
+            // PB labels
+            svg.selectAll('.phc-label')
+                .data(phcOrder)
+                .join('text')
+                .attr('class', 'phc-label')
+                .attr('x', (d, i) => Math.sin(angleScale(i)) * (outerRadius - 15))
+                .attr('y', (d, i) => -Math.cos(angleScale(i)) * (outerRadius - 15))
+                .attr('text-anchor', 'middle')
+                .attr('dominant-baseline', 'middle')
+                .attr('fill', '#fff')
+                .attr('font-size', '14px')
+                .attr('font-weight', 'bold')
+                .text(d => d);
+
+            // Prepare arrow data - group by source-target pair and impact type
+            const arrowData = [];
+
+            // First, organize connections by source-target pair
+            const pairData = {};
+            Object.keys(connections).forEach(key => {
+                const [source, target] = key.split('-');
+                if (source === target) return; // Skip self-connections
+                if (!phcOrder.includes(source) || !phcOrder.includes(target)) return;
+
+                const conn = connections[key];
+                if (!pairData[key]) pairData[key] = [];
+
+                conn.forEach(c => {
+                    pairData[key].push(c);
+                });
+            });
+
+            // Calculate spacing offsets for arrows from each PB
+            const pbOutgoingOffsets = {};
+            const pbIncomingOffsets = {};
+            phcOrder.forEach(pb => {
+                pbOutgoingOffsets[pb] = 0;
+                pbIncomingOffsets[pb] = 0;
+            });
+
+            // Count total outgoing/incoming width for spacing
+            const pbOutgoingWidth = {};
+            const pbIncomingWidth = {};
+            phcOrder.forEach(pb => {
+                pbOutgoingWidth[pb] = 0;
+                pbIncomingWidth[pb] = 0;
+            });
+
+            Object.keys(pairData).forEach(key => {
+                const [source, target] = key.split('-');
+                pairData[key].forEach(c => {
+                    const w = relevanceWidth[c.relevance] || 1;
+                    pbOutgoingWidth[source] += w + 1;
+                    pbIncomingWidth[target] += w + 1;
+                });
+            });
+
+            // Create arrows with proper spacing
+            Object.keys(pairData).forEach(key => {
+                const [source, target] = key.split('-');
+                const conns = pairData[key];
+
+                conns.forEach(c => {
+                    const weight = relevanceWidth[c.relevance] || 1;
+
+                    // Calculate start offset
+                    const startOffsetAngle = (pbOutgoingOffsets[source] - pbOutgoingWidth[source]/2 + weight/2) * 0.006;
+                    pbOutgoingOffsets[source] += weight + 1;
+
+                    // Calculate end offset
+                    const endOffsetAngle = (pbIncomingOffsets[target] - pbIncomingWidth[target]/2 + weight/2) * 0.006;
+                    pbIncomingOffsets[target] += weight + 1;
+
+                    arrowData.push({
+                        source,
+                        target,
+                        impact: c.impact,
+                        relevance: c.relevance,
+                        process: c.process,
+                        literature: c.literature,
+                        weight: weight,
+                        startAngle: pbAngles[source] + startOffsetAngle,
+                        endAngle: pbAngles[target] + endOffsetAngle
+                    });
+                });
+            });
+
+            // Function to create curved arrow path
+            function createArrowPath(d) {
+                const startAngle = d.startAngle;
+                const endAngle = d.endAngle;
+                const r = arrowRadius;
+
+                // Start and end points
+                const x1 = Math.sin(startAngle) * r;
+                const y1 = -Math.cos(startAngle) * r;
+                const x2 = Math.sin(endAngle) * r;
+                const y2 = -Math.cos(endAngle) * r;
+
+                // Calculate control point for quadratic bezier
+                // Pull the curve inward based on the angle difference
+                let angleDiff = endAngle - startAngle;
+                if (angleDiff < 0) angleDiff += 2 * Math.PI;
+                if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+
+                const pullFactor = 1 - (angleDiff / Math.PI) * 0.7;
+                const midAngle = (startAngle + endAngle) / 2;
+                const cx = Math.sin(midAngle) * r * pullFactor;
+                const cy = -Math.cos(midAngle) * r * pullFactor;
+
+                return `M${x1},${y1} Q${cx},${cy} ${x2},${y2}`;
+            }
+
+            // Determine line style based on impact
+            function getStrokeDasharray(impact) {
+                if (impact === '(+)') return '12,4'; // Dashed for positive
+                if (impact === '(-/+)' || impact === '?') return '3,3'; // Dotted for mixed/unknown
+                return 'none'; // Solid for negative
+            }
+
+            // Draw arrows
+            svg.selectAll('.phc-arrow')
+                .data(arrowData)
+                .join('path')
+                .attr('class', 'phc-arrow')
+                .attr('d', createArrowPath)
+                .attr('fill', 'none')
+                .attr('stroke', d => pbColors[d.source])
+                .attr('stroke-width', d => d.weight)
+                .attr('stroke-dasharray', d => getStrokeDasharray(d.impact))
+                .attr('stroke-linecap', 'round')
+                .attr('opacity', 0.8)
+                .attr('marker-end', d => `url(#phc-arrow-${d.source})`)
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('opacity', 1).attr('stroke-width', d.weight + 1);
+
+                    const impactLabel = d.impact === '(-)' ? 'Negative' : d.impact === '(+)' ? 'Positive' : d.impact === '(-/+)' ? 'Mixed' : 'Unknown';
+                    const content = `
+                        <div class="tooltip-header">
+                            <span style="color: ${pbColors[d.source]}; font-weight: bold;">${d.source}</span>
+                            <span class="tooltip-arrow">→</span>
+                            <span style="color: ${pbColors[d.target]}; font-weight: bold;">${d.target}</span>
+                        </div>
+                        <div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(128,128,128,0.2);">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                <span class="tooltip-impact ${d.impact === '(-)' ? 'negative' : d.impact === '(+)' ? 'positive' : d.impact === '(-/+)' ? 'mixed' : 'unknown'}">${d.impact}</span>
+                                <span class="tooltip-muted" style="font-size: 0.7rem;">Relevance: ${d.relevance}</span>
+                            </div>
+                            <div class="tooltip-value" style="font-size: 0.8rem; margin-bottom: 4px;">${d.process}</div>
+                            <div class="tooltip-literature">${d.literature || 'No reference'}</div>
+                        </div>
+                    `;
+                    showTooltip(event, content);
+                })
+                .on('mousemove', event => {
+                    tooltip.style.left = `${Math.min(event.clientX + 15, window.innerWidth - 450)}px`;
+                    tooltip.style.top = `${Math.min(event.clientY + 15, window.innerHeight - 300)}px`;
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).attr('opacity', 0.8).attr('stroke-width', d.weight);
+                    hideTooltip();
+                });
+
+            // Add arrow markers for each PB color
+            const defs = svg.append('defs');
+            phcOrder.forEach(pb => {
+                defs.append('marker')
+                    .attr('id', `phc-arrow-${pb}`)
+                    .attr('viewBox', '0 -5 10 10')
+                    .attr('refX', 8)
+                    .attr('refY', 0)
+                    .attr('markerWidth', 4)
+                    .attr('markerHeight', 4)
+                    .attr('orient', 'auto')
+                    .append('path')
+                    .attr('d', 'M0,-5L10,0L0,5')
+                    .attr('fill', pbColors[pb]);
+            });
+
+            // Create legend
+            const phcLegend = document.getElementById('legend-phc');
+            phcLegend.innerHTML = `
+                <div class="legend-section">
+                    <h3>Arrow Color (Source PB)</h3>
+                    ${createPBLegendItems('phc')}
+                </div>
+                <div class="legend-section">
+                    <h3>Line Style (Impact Direction)</h3>
+                    <div class="legend-item interactive" data-type="impact" data-value="(-)" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#e74c3c" stroke-width="3"/></svg>
+                        <span>Negative (-) - Solid</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="impact" data-value="(+)" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#2ecc71" stroke-width="3" stroke-dasharray="12,4"/></svg>
+                        <span>Positive (+) - Dashed</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="impact" data-value="(-/+)" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#f39c12" stroke-width="3" stroke-dasharray="3,3"/></svg>
+                        <span>Mixed (-/+) - Dotted</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="impact" data-value="?" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#95a5a6" stroke-width="3" stroke-dasharray="3,3"/></svg>
+                        <span>Unknown (?) - Dotted</span>
+                    </div>
+                </div>
+                <div class="legend-section">
+                    <h3>Arrow Width (Relevance)</h3>
+                    <div class="legend-item interactive" data-type="relevance" data-value="high" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#888" stroke-width="4"/></svg>
+                        <span>High</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="relevance" data-value="medium" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#888" stroke-width="2"/></svg>
+                        <span>Medium</span>
+                    </div>
+                    <div class="legend-item interactive" data-type="relevance" data-value="low" data-viz="phc">
+                        <svg width="40" height="20"><line x1="0" y1="10" x2="40" y2="10" stroke="#888" stroke-width="1"/></svg>
+                        <span>Low</span>
+                    </div>
+                </div>
+            `;
+        }
+
         // Initialize all visualizations
         createChordDiagram();
         createEdgeBundling();
         createMatrix();
+        createPHCFigure();
 
         // ============================================
         // INTERACTIVE LEGEND HIGHLIGHTING
@@ -1606,6 +1903,8 @@
                 highlightEdgeBundle(type, value);
             } else if (viz === 'matrix') {
                 highlightMatrix(type, value);
+            } else if (viz === 'phc') {
+                highlightPHC(type, value);
             }
         }
 
@@ -1616,6 +1915,8 @@
                 resetEdgeBundleHighlight();
             } else if (viz === 'matrix') {
                 resetMatrixHighlight();
+            } else if (viz === 'phc') {
+                resetPHCHighlight();
             }
         }
 
@@ -1712,6 +2013,34 @@
             cells.attr('opacity', d => d.count > 0 ? 0.4 + d.weight * 0.15 : 1);
             d3.select('#chart-matrix').selectAll('.row-label').attr('opacity', 1);
             d3.select('#chart-matrix').selectAll('.col-label').attr('opacity', 1);
+        }
+
+        // PHC highlighting
+        function highlightPHC(type, value) {
+            const arrows = d3.select('#chart-phc').selectAll('.phc-arrow');
+            const arcs = d3.select('#chart-phc').selectAll('.phc-arc');
+
+            if (type === 'pb') {
+                arcs.attr('opacity', d => d === value ? 1 : 0.3);
+                arrows.attr('opacity', d => d.source === value || d.target === value ? 1 : 0.1);
+            } else if (type === 'impact') {
+                arrows.attr('opacity', d => d.impact === value ? 1 : 0.1);
+                arcs.attr('opacity', 0.5);
+            } else if (type === 'relevance') {
+                arrows.attr('opacity', d => {
+                    const relevanceLevel = d.weight >= 3 ? 'high' : d.weight >= 2 ? 'medium' : 'low';
+                    if (value === 'high') return relevanceLevel === 'high' ? 1 : 0.1;
+                    if (value === 'medium') return relevanceLevel === 'medium' ? 1 : 0.1;
+                    if (value === 'low') return relevanceLevel === 'low' ? 1 : 0.1;
+                    return 0.1;
+                });
+                arcs.attr('opacity', 0.5);
+            }
+        }
+
+        function resetPHCHighlight() {
+            d3.select('#chart-phc').selectAll('.phc-arrow').attr('opacity', 0.8);
+            d3.select('#chart-phc').selectAll('.phc-arc').attr('opacity', 1);
         }
 
         // ============================================
