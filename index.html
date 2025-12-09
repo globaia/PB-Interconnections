@@ -1674,89 +1674,77 @@
                 });
             });
 
-            // Calculate total width needed at each PB for proper spacing
-            // Each PB needs space for all outgoing and incoming arrows
-            const pbTotalWidth = {};
-            phcOrder.forEach(pb => pbTotalWidth[pb] = 0);
+            // Use 80% of each arc segment for arrow endpoints
+            const usableArcFraction = 0.80;
+            const usableArcAngle = segmentAngle * usableArcFraction;
 
-            allArrows.forEach(arrow => {
-                pbTotalWidth[arrow.source] += arrow.weight + 0.5;
-                pbTotalWidth[arrow.target] += arrow.weight + 0.5;
-            });
-
-            // Track current offset at each PB, organized by target direction
-            // This ensures arrows going to nearby PBs are grouped together
-            const pbOffsetTrackers = {};
+            // Collect all START points and END points per PB
+            // Each arrow creates one start point at source and one end point at target
+            const pbStartPoints = {}; // arrows leaving this PB
+            const pbEndPoints = {};   // arrows arriving at this PB
             phcOrder.forEach(pb => {
-                pbOffsetTrackers[pb] = { used: 0 };
+                pbStartPoints[pb] = [];
+                pbEndPoints[pb] = [];
             });
 
-            // Sort arrows by source, then by target position (clockwise from source)
-            const sortedArrows = [...allArrows].sort((a, b) => {
-                if (a.source !== b.source) {
-                    return phcIndex[a.source] - phcIndex[b.source];
-                }
-                // Sort by angular distance from source (clockwise)
-                const distA = (phcIndex[a.target] - phcIndex[a.source] + phcOrder.length) % phcOrder.length;
-                const distB = (phcIndex[b.target] - phcIndex[b.source] + phcOrder.length) % phcOrder.length;
-                return distA - distB;
+            // Group arrows by their source (for start points) and target (for end points)
+            allArrows.forEach((arrow, idx) => {
+                pbStartPoints[arrow.source].push({ arrow, idx });
+                pbEndPoints[arrow.target].push({ arrow, idx });
             });
 
-            // Assign start positions (where arrow leaves source PB)
-            const arrowStartOffsets = new Map();
-            sortedArrows.forEach(arrow => {
-                const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
-                const offset = pbOffsetTrackers[arrow.source].used;
-                arrowStartOffsets.set(key, offset);
-                pbOffsetTrackers[arrow.source].used += arrow.weight + 0.5;
-            });
-
-            // Reset trackers for end positions
+            // For each PB, sort outgoing arrows by target position (clockwise)
+            // This ensures arrows to nearby targets are grouped together
             phcOrder.forEach(pb => {
-                pbOffsetTrackers[pb] = { used: 0 };
+                const pbIdx = phcIndex[pb];
+                pbStartPoints[pb].sort((a, b) => {
+                    const distA = (phcIndex[a.arrow.target] - pbIdx + phcOrder.length) % phcOrder.length;
+                    const distB = (phcIndex[b.arrow.target] - pbIdx + phcOrder.length) % phcOrder.length;
+                    return distA - distB;
+                });
+                // Sort incoming arrows by source position
+                pbEndPoints[pb].sort((a, b) => {
+                    const distA = (pbIdx - phcIndex[a.arrow.source] + phcOrder.length) % phcOrder.length;
+                    const distB = (pbIdx - phcIndex[b.arrow.source] + phcOrder.length) % phcOrder.length;
+                    return distA - distB;
+                });
             });
 
-            // Sort arrows by target, then by source position (for incoming arrows)
-            const sortedByTarget = [...allArrows].sort((a, b) => {
-                if (a.target !== b.target) {
-                    return phcIndex[a.target] - phcIndex[b.target];
+            // Assign evenly-spaced positions within each PB's arc
+            const arrowStartAngles = new Array(allArrows.length);
+            const arrowEndAngles = new Array(allArrows.length);
+
+            phcOrder.forEach(pb => {
+                const centerAngle = pbAngles[pb];
+                const startList = pbStartPoints[pb];
+                const endList = pbEndPoints[pb];
+
+                // Distribute START points evenly across the arc
+                const numStarts = startList.length;
+                if (numStarts > 0) {
+                    startList.forEach((item, i) => {
+                        // Position from -0.5 to +0.5, evenly spaced
+                        const t = numStarts === 1 ? 0 : (i / (numStarts - 1)) - 0.5;
+                        arrowStartAngles[item.idx] = centerAngle + t * usableArcAngle;
+                    });
                 }
-                // Sort by angular distance from target (counter-clockwise)
-                const distA = (phcIndex[a.target] - phcIndex[a.source] + phcOrder.length) % phcOrder.length;
-                const distB = (phcIndex[b.target] - phcIndex[b.source] + phcOrder.length) % phcOrder.length;
-                return distB - distA;
-            });
 
-            // Assign end positions (where arrow arrives at target PB)
-            const arrowEndOffsets = new Map();
-            sortedByTarget.forEach(arrow => {
-                const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
-                const offset = pbOffsetTrackers[arrow.target].used;
-                arrowEndOffsets.set(key, offset);
-                pbOffsetTrackers[arrow.target].used += arrow.weight + 0.5;
+                // Distribute END points evenly across the arc
+                const numEnds = endList.length;
+                if (numEnds > 0) {
+                    endList.forEach((item, i) => {
+                        const t = numEnds === 1 ? 0 : (i / (numEnds - 1)) - 0.5;
+                        arrowEndAngles[item.idx] = centerAngle + t * usableArcAngle;
+                    });
+                }
             });
 
             // Build final arrow data with calculated positions
-            // Use a larger spacing factor to spread arrows across more of the arc
-            const spacingFactor = 0.018; // Controls how spread out arrows are along arc
-
-            const arrowData = allArrows.map(arrow => {
-                const key = `${arrow.source}-${arrow.target}-${arrow.process}`;
-                const startOffset = arrowStartOffsets.get(key);
-                const endOffset = arrowEndOffsets.get(key);
-
-                // Center the offsets around the PB position
-                const startAngle = pbAngles[arrow.source] +
-                    (startOffset - pbTotalWidth[arrow.source]/2 + arrow.weight/2) * spacingFactor;
-                const endAngle = pbAngles[arrow.target] +
-                    (endOffset - pbTotalWidth[arrow.target]/2 + arrow.weight/2) * spacingFactor;
-
-                return {
-                    ...arrow,
-                    startAngle,
-                    endAngle
-                };
-            });
+            const arrowData = allArrows.map((arrow, idx) => ({
+                ...arrow,
+                startAngle: arrowStartAngles[idx],
+                endAngle: arrowEndAngles[idx]
+            }));
 
             // Function to create curved arrow path with consistent curvature
             function createArrowPath(d) {
