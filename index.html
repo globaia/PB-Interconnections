@@ -841,6 +841,31 @@
             `).join('');
         }
 
+        // Helper function to highlight a PB in the legend
+        function highlightLegendPB(vizType, pbAbbrev) {
+            const legendItems = document.querySelectorAll(`[data-viz="${vizType}"][data-type="pb"]`);
+            legendItems.forEach(item => {
+                if (item.dataset.value === pbAbbrev) {
+                    item.classList.add('active');
+                    item.style.background = 'var(--border-color)';
+                    item.style.transform = 'translateX(4px)';
+                } else {
+                    item.style.opacity = '0.4';
+                }
+            });
+        }
+
+        // Helper function to reset legend highlighting
+        function resetLegendHighlight(vizType) {
+            const legendItems = document.querySelectorAll(`[data-viz="${vizType}"][data-type="pb"]`);
+            legendItems.forEach(item => {
+                item.classList.remove('active');
+                item.style.background = '';
+                item.style.transform = '';
+                item.style.opacity = '';
+            });
+        }
+
         // Helper function to generate impact legend items (interactive)
         function createImpactLegendItems(vizType) {
             return `
@@ -999,6 +1024,7 @@
                 })
                 .style('cursor', 'pointer')
                 .on('mouseover', function(event, d) {
+                    const pbAbbrev = nodes[d.index];
                     svg.selectAll('.chord-path').style('opacity', c =>
                         c.sourceIndex === d.index || c.targetIndex === d.index ? 0.8 : 0.1);
                     d3.select(this).transition().duration(150)
@@ -1008,6 +1034,7 @@
                             const y = Math.sin(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
                             return `translate(${x - iconSize*0.6},${y - iconSize*0.6})`;
                         });
+                    highlightLegendPB('chord', pbAbbrev);
                 })
                 .on('mouseout', function(event, d) {
                     svg.selectAll('.chord-path').style('opacity', 0.7);
@@ -1018,6 +1045,7 @@
                             const y = Math.sin(d.angle - Math.PI/2) * (outerRadius + iconSize/2 + 5);
                             return `translate(${x - iconSize/2},${y - iconSize/2})`;
                         });
+                    resetLegendHighlight('chord');
                 });
 
             // Create ribbon data for each impact type separately
@@ -1345,6 +1373,7 @@
                         // Scale up the symbol
                         d3.select(this).transition().duration(150).attr('width', symbolSize * 1.2).attr('height', symbolSize * 1.2)
                             .attr('x', -symbolSize * 0.6).attr('y', -symbolSize * 0.6);
+                        highlightLegendPB('edge-bundle', n);
                     })
                     .on('mouseout', function() {
                         linksGroup.selectAll('.edge-bundle-link')
@@ -1353,6 +1382,7 @@
                         // Reset symbol size
                         d3.select(this).transition().duration(150).attr('width', symbolSize).attr('height', symbolSize)
                             .attr('x', -symbolSize / 2).attr('y', -symbolSize / 2);
+                        resetLegendHighlight('edge-bundle');
                     });
 
                 const labelRadius = radius + 45;
@@ -1368,7 +1398,7 @@
                     .attr('fill', '#fff')
                     .attr('font-size', '12px')
                     .attr('font-weight', 'bold')
-                    .text(n);
+                    .text(`${n} ${pbNames[n]}`);
             });
 
             // Tension slider
@@ -1546,7 +1576,21 @@
                 .attr('height', iconSize)
                 .attr('x', -iconSize - 10)
                 .attr('y', (d, i) => i * size + size / 2 - iconSize / 2)
-                .style('cursor', 'pointer');
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize * 1.15).attr('height', iconSize * 1.15)
+                        .attr('x', -iconSize * 1.15 - 10)
+                        .attr('y', nodes.indexOf(d) * size + size / 2 - iconSize * 0.575);
+                    highlightLegendPB('matrix', d);
+                })
+                .on('mouseout', function(event, d) {
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize).attr('height', iconSize)
+                        .attr('x', -iconSize - 10)
+                        .attr('y', nodes.indexOf(d) * size + size / 2 - iconSize / 2);
+                    resetLegendHighlight('matrix');
+                });
 
             // Column labels (targets) - SVG icons
             g.selectAll('.col-label')
@@ -1558,7 +1602,23 @@
                 .attr('height', iconSize)
                 .attr('x', (d, i) => i * size + size / 2 - iconSize / 2)
                 .attr('y', -iconSize - 10)
-                .style('cursor', 'pointer');
+                .style('cursor', 'pointer')
+                .on('mouseover', function(event, d) {
+                    const i = nodes.indexOf(d);
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize * 1.15).attr('height', iconSize * 1.15)
+                        .attr('x', i * size + size / 2 - iconSize * 0.575)
+                        .attr('y', -iconSize * 1.15 - 10);
+                    highlightLegendPB('matrix', d);
+                })
+                .on('mouseout', function(event, d) {
+                    const i = nodes.indexOf(d);
+                    d3.select(this).transition().duration(150)
+                        .attr('width', iconSize).attr('height', iconSize)
+                        .attr('x', i * size + size / 2 - iconSize / 2)
+                        .attr('y', -iconSize - 10);
+                    resetLegendHighlight('matrix');
+                });
 
             // Axis labels
             svg.append('text')
@@ -1687,6 +1747,7 @@
                         .attr('width', iconSize * 1.2).attr('height', iconSize * 1.2)
                         .attr('x', (_, i) => Math.sin(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize*0.6)
                         .attr('y', (_, i) => -Math.cos(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize*0.6);
+                    highlightLegendPB('phc', d);
                 })
                 .on('mouseout', function(event, d) {
                     svg.selectAll('.phc-arrow').attr('opacity', 0.8);
@@ -1694,6 +1755,7 @@
                         .attr('width', iconSize).attr('height', iconSize)
                         .attr('x', Math.sin(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize/2)
                         .attr('y', -Math.cos(angleScale(phcIndex[d])) * (outerRadius + iconSize/2 + 5) - iconSize/2);
+                    resetLegendHighlight('phc');
                 });
 
             // Collect all arrows with their data
